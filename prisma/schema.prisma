@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String               @id @default(uuid())
+  email                  String               @unique
+  passwordHash           String
+  name                   String?
+  role                   Role                 @default(SOCIO)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  emailConfirmed         Boolean              @default(false)
+  emailConfirmToken      String?              @unique
+  emailConfirmExpires    DateTime?
+  authorizationsReceived GuestAuthorization[] @relation("UserReceived")
+  authorizationsGiven    GuestAuthorization[] @relation("UserGiven")
+  resetTokens            PasswordResetToken[]
+  reservas               Reserva[]
+
+  @@index([role])
+}
+
+model GuestAuthorization {
+  id         String   @id @default(uuid())
+  socioId    String
+  invitadoId String
+  createdAt  DateTime @default(now())
+  invitado   User     @relation("UserReceived", fields: [invitadoId], references: [id])
+  socio      User     @relation("UserGiven", fields: [socioId], references: [id])
+
+  @@unique([socioId, invitadoId])
+}
+
+model Espacio {
+  id                     String         @id @default(uuid())
+  nombre                 String
+  tipo                   TipoEspacio
+  capacidad              Int
+  capacidadExtra         Int?
+  tarifaClp              Int
+  tarifaExterno          Int?
+  extraSocioPorPersona   Int?
+  extraTerceroPorPersona Int?
+  descripcion            String?
+  imagenUrl              String?
+  activo                 Boolean        @default(true)
+  modalidadCobro         ModalidadCobro @default(POR_NOCHE)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  reservas               Reserva[]
+
+  @@index([tipo, activo])
+}
+
+model Reserva {
+  id                String        @id @default(uuid())
+  userId            String
+  espacioId         String
+  fechaInicio       DateTime
+  fechaFin          DateTime
+  dias              Int
+  totalClp          Int
+  estado            ReservaEstado @default(PENDIENTE)
+  nombreSocio       String
+  rutSocio          String
+  telefonoSocio     String
+  correoEnap        String
+  correoPersonal    String?
+  usoReserva        UsoReserva    @default(USO_PERSONAL)
+  socioPresente     Boolean       @default(true)
+  nombreResponsable String?
+  rutResponsable    String?
+  emailResponsable  String?
+  cantidadPersonas  Int
+  terminosAceptados Boolean       @default(false)
+  terminosVersion   String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  invitados         Invitado[]
+  pago              Pago?
+  espacio           Espacio       @relation(fields: [espacioId], references: [id])
+  user              User          @relation(fields: [userId], references: [id])
+  
+  precioBaseSnapshot Int? //Cuanto costaba
+  descuentoAplicado  Int  //Si aplica beneficio piscinaGrat
+
+  @@index([estado])
+  @@index([fechaInicio, fechaFin])
+  @@index([espacioId, fechaInicio, fechaFin])
+}
+
+model Invitado {
+  id        String  @id @default(uuid())
+  reservaId String
+  nombre    String
+  rut       String
+  edad      Int?
+  reserva   Reserva @relation(fields: [reservaId], references: [id])
+}
+
+model Pago {
+  id                 String        @id @default(uuid())
+  reservaId          String        @unique
+  provider           String
+  sessionId          String?
+  amountClp          Int
+  status             PaymentStatus @default(CREATED)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  accountingDate     String?
+  buyOrder           String?
+  installmentsNumber Int?
+  paymentTypeCode    String?
+  rawResponse        Json?
+  responseCode       Int?
+  responseMessage    String?
+  token              String?
+  transactionDate    String?
+  reserva            Reserva       @relation(fields: [reservaId], references: [id])
+
+  @@index([status])
+  @@index([token])
+  @@index([buyOrder])
+  @@index([createdAt])
+}
+
+model PasswordResetToken {
+  token     String    @id
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([userId, expiresAt])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String   // EJ: "CREAR_RESERVA", "ELIMINAR_ESPACIO", "CAMBIO_TARIFA"
+  entity      String   // EJ: "Reserva", "Espacio"
+  entityId    String   // ID del objeto afectado
+  userId      String   // Quién hizo la acción (Admin o Socio)
+  details     Json?    // Guardar el estado anterior y nuevo (diff)
+  ipAddress   String?  // Seguridad extra
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityId])
+  @@index([action])
+}
+
+enum TipoEspacio {
+  CABANA
+  QUINCHO
+  PISCINA
+}
+
+enum Role {
+  ADMIN
+  SOCIO
+  EXTERNO
+}
+
+enum ModalidadCobro {
+  POR_NOCHE
+  POR_DIA
+  POR_PERSONA
+}
+
+enum UsoReserva {
+  USO_PERSONAL
+  CARGA_DIRECTA
+  TERCEROS
+}
+
+enum ReservaEstado {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  RECHAZADA
+  PENDIENTE_PAGO
+  CADUCADA
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
