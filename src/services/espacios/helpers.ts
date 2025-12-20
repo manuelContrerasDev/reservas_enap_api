@@ -1,6 +1,6 @@
 // src/services/espacios/helpers.ts
 
-import { prisma } from "../../config/db";
+import { prisma } from "../../lib/db";
 import { Response } from "express";
 import { ModalidadCobro, TipoEspacio, ReservaEstado } from "@prisma/client";
 

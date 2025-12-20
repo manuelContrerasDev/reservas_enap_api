@@ -1,7 +1,7 @@
 // src/controllers/auth/reset-request.controller.ts
 
 import { Request, Response } from "express";
-import { prisma } from "../../config/db";
+import { prisma } from "../../lib/db";
 import { ZodError } from "zod";
 import { resetRequestSchema } from "../../validators/auth.schema";
 import { TokenService } from "../../services/TokenService";

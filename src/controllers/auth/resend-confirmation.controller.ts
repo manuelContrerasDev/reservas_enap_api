@@ -1,7 +1,7 @@
 // src/controllers/auth/resend-confirmation.controller.ts
 
 import { Request, Response } from "express";
-import { prisma } from "../../config/db";
+import { prisma } from "../../lib/db";
 import { TokenService } from "../../services/TokenService";
 import { EmailService } from "../../services/EmailService";
 

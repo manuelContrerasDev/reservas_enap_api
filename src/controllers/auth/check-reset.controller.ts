@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { prisma } from "../../config/db";
+import { prisma } from "../../lib/db";
 
 export const checkReset = async (req: Request, res: Response) => {
   try {

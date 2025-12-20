@@ -2,7 +2,6 @@
 import { z } from "zod";
 
 export const validarInvitados = (data: any, ctx: z.RefinementCtx) => {
-  // Invitados opcional
   if (!Array.isArray(data.invitados)) return;
 
   data.invitados.forEach((i: any, idx: number) => {
@@ -17,8 +16,16 @@ export const validarInvitados = (data: any, ctx: z.RefinementCtx) => {
     if (i.edad != null && (isNaN(i.edad) || i.edad < 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Edad inválida en invitado",
+        message: "Edad inválida",
         path: ["invitados", idx, "edad"],
+      });
+    }
+
+    if (i.esPiscina != null && typeof i.esPiscina !== "boolean") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "esPiscina debe ser booleano",
+        path: ["invitados", idx, "esPiscina"],
       });
     }
   });

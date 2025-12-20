@@ -64,7 +64,7 @@ export class WebpayProvider {
       console.log("⚠️ Webpay.init ignorado en desarrollo");
       return {
         token: "dev-token",
-        url: "https://www.google.cl"
+        url: process.env.WEB_URL + "/pago/dev-ok"
       };
     }
 

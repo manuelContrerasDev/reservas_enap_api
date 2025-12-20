@@ -1,6 +1,4 @@
-// ===============================================================
 // 🌐 TIPOS GLOBALES — SISTEMA RESERVAS ENAP
-// ===============================================================
 
 import type { Request } from "express";
 
@@ -16,6 +14,7 @@ export interface TokenPayload {
 }
 
 export interface AuthUser {
+  id: string;       // ← requerido por servicios
   sub: string;
   email: string;
   role: UserRole;
@@ -27,4 +26,3 @@ export interface AuthRequest extends Request {
 }
 
 export {};
-

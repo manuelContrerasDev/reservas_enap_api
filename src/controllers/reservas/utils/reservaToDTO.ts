@@ -1,46 +1,98 @@
-// src/controllers/reservas/utils/reservaToDTO.ts
+// ============================================================
+// reservaToDTO - ENAP2025
+// ============================================================
 
 export const reservaToDTO = (r: any) => ({
   id: r.id,
 
-  espacioId: r.espacio?.id ?? r.espacioId ?? null,
-  espacioNombre: r.espacio?.nombre ?? null,
-  espacioTipo: r.espacio?.tipo ?? null,
+  /* --------------------------------------------------------
+   * ESPACIO
+   * -------------------------------------------------------- */
+  espacio: r.espacio
+    ? {
+        id: r.espacio.id,
+        nombre: r.espacio.nombre,
+        tipo: r.espacio.tipo,
+        capacidad: r.espacio.capacidad ?? null,
+      }
+    : {
+        id: r.espacioId,
+        nombre: null,
+        tipo: null,
+        capacidad: null,
+      },
 
+  /* --------------------------------------------------------
+   * FECHAS Y ESTADO
+   * -------------------------------------------------------- */
   fechaInicio: r.fechaInicio,
   fechaFin: r.fechaFin,
   dias: r.dias,
-  cantidadPersonas: r.cantidadPersonas,
+  estado: r.estado,
   totalClp: r.totalClp,
 
-  estado: r.estado,
+  /* --------------------------------------------------------
+   * CANTIDADES (Nuevo modelo ENAP 2025)
+   * -------------------------------------------------------- */
+  cantidadAdultos: r.cantidadAdultos ?? 0,
+  cantidadNinos: r.cantidadNinos ?? 0,
+  cantidadPiscina: r.cantidadPiscina ?? 0,
 
-  usuario: {
-    id: r.user?.id ?? null,
-    nombre: r.user?.name ?? null,
-    email: r.user?.email ?? null,
+  /* --------------------------------------------------------
+   * SNAPSHOT FINANCIERO (Nuevo)
+   * -------------------------------------------------------- */
+  snapshot: {
+    precioBase: r.precioBaseSnapshot ?? null,
+    precioPersona: r.precioPersonaSnapshot ?? null,
+    precioPiscina: r.precioPiscinaSnapshot ?? null,
   },
 
-  nombreSocio: r.nombreSocio,
-  rutSocio: r.rutSocio,
-  telefonoSocio: r.telefonoSocio,
-  correoEnap: r.correoEnap,
-  correoPersonal: r.correoPersonal ?? null,
+  /* --------------------------------------------------------
+   * DATOS DEL SOCIO
+   * -------------------------------------------------------- */
+  socio: {
+    nombre: r.nombreSocio,
+    rut: r.rutSocio,
+    telefono: r.telefonoSocio,
+    correoEnap: r.correoEnap,
+    correoPersonal: r.correoPersonal ?? null,
+  },
 
+  /* --------------------------------------------------------
+   * USO / RESPONSABLE
+   * -------------------------------------------------------- */
+  usoReserva: r.usoReserva,
+  socioPresente: r.socioPresente ?? true,
+
+  responsable: r.socioPresente
+    ? null
+    : {
+        nombre: r.nombreResponsable ?? null,
+        rut: r.rutResponsable ?? null,
+        email: r.emailResponsable ?? null,
+      },
+
+  /* --------------------------------------------------------
+   * INVITADOS
+   * -------------------------------------------------------- */
   invitados:
     r.invitados?.map((i: any) => ({
       id: i.id,
       nombre: i.nombre,
-      rut: i.rut ?? null,
+      rut: i.rut,
       edad: i.edad ?? null,
     })) ?? [],
 
+  /* --------------------------------------------------------
+   * PAGO (Webpay) — Nuevo modelo
+   * -------------------------------------------------------- */
   pago: r.pago
     ? {
         id: r.pago.id,
         status: r.pago.status,
-        amountClp: r.pago.amountClp,
+        buyOrder: r.pago.buyOrder,
         token: r.pago.token ?? null,
+        amountClp: r.pago.amountClp,
         transactionDate: r.pago.transactionDate ?? null,
         rawResponse: r.pago.rawResponse ?? null,
       }

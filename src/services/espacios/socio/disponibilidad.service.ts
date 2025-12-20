@@ -1,6 +1,6 @@
 // src/services/espacios/socio/disponibilidad.service.ts
 
-import { prisma } from "../../../config/db";
+import { prisma } from "../../../lib/db";
 import { ReservaEstado } from "@prisma/client";
 import { getEspacioOr404 } from "../helpers";
 

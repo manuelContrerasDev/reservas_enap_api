@@ -1,6 +1,8 @@
-require("./load-env.js");
-import path from "path";
+import "module-alias/register";
 
+import "./load-env";
+
+import path from "path";
 
 const required = (name: string, value: any) => {
   if (!value) {
@@ -27,8 +29,6 @@ if (process.env.NODE_ENV !== "prisma") {
   console.log("✔ ENV cargado y validado correctamente");
 }
 
-
-
 // ============================================================
 // Imports del servidor (después de dotenv)
 // ============================================================
@@ -41,7 +41,7 @@ import morgan from "morgan";
 import cors from "cors";
 import { xss } from "express-xss-sanitizer";
 import rateLimit from "express-rate-limit";
-import { prisma } from "./config/db";
+import { prisma } from "./lib/db";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -51,8 +51,13 @@ import espaciosRoutes from "./routes/espacios.routes";
 import reservasRoutes from "./routes/reservas.routes";
 import pagosRoutes from "./routes/pagos.routes";
 import debugRoutes from "./routes/debug.routes";
-import guestAuthorizationRoutes from "./routes/guestAuth.routes";
+
 import testRoutes from "./routes/test.routes";
+
+// Admin
+import adminReservasRoutes from "./routes/admin/reservas.admin.routes";
+import adminUsersRoutes from "./routes/admin/users.admin.routes";
+
 
 // ============================================================
 // App Config
@@ -90,8 +95,9 @@ app.use(limiter);
 // ============================================================
 const allowedOrigins = [
   "http://localhost:5173",
-  process.env.WEB_URL!,
-];
+  process.env.WEB_URL,
+].filter(Boolean) as string[];
+
 
 app.use(
   cors({
@@ -126,9 +132,10 @@ app.use("/api/espacios", espaciosRoutes);
 app.use("/api/reservas", reservasRoutes);
 app.use("/api/pagos", pagosRoutes);
 app.use("/api/debug", debugRoutes);
-app.use("/api/guest-authorizations", guestAuthorizationRoutes);
-app.use("/api", testRoutes);
+app.use("/api/admin/reservas", adminReservasRoutes);
+app.use("/api/admin/users", adminUsersRoutes);
 
+app.use("/api", testRoutes);
 // ============================================================
 // Health
 // ============================================================

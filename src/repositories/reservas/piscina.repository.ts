@@ -1,18 +1,39 @@
-// src/repositories/reservas/piscina.repository.ts
+// ============================================================
+// piscina.repository.ts — ENAP 2025
+// ============================================================
 
-import { prisma } from "../../config/db";
+import { prisma } from "../../lib/db";
+import { ReservaEstado, TipoEspacio } from "@prisma/client";
 
 export const PiscinaRepository = {
 
+  /* --------------------------------------------------------
+   * Obtener reservas del día
+   * -------------------------------------------------------- */
   reservasPorFecha(fecha: Date) {
     return prisma.reserva.findMany({
       where: {
-        espacio: { tipo: "PISCINA" },
+        espacio: { tipo: TipoEspacio.PISCINA },
         fechaInicio: fecha,
-        estado: { not: "CANCELADA" },
+        estado: { not: ReservaEstado.CANCELADA },
       },
-      select: { cantidadPersonas: true },
+      select: {
+        cantidadPiscina: true,
+      },
     });
   },
 
+  /* --------------------------------------------------------
+   * Obtener espacio piscina
+   * (solo debe existir 1 en ENAP)
+   * -------------------------------------------------------- */
+  obtenerEspacioPiscina() {
+    return prisma.espacio.findFirst({
+      where: { tipo: TipoEspacio.PISCINA },
+      select: {
+        id: true,
+        capacidad: true,
+      },
+    });
+  },
 };

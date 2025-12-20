@@ -1,43 +1,47 @@
-// src/repositories/reservas/invitados.repository.ts
-import { prisma } from "../../config/db";
+// ============================================================
+// invitados.repository.ts — ENAP 2025 (OFICIAL)
+// ============================================================
+
+import { prisma } from "../../lib/db";
+
+interface InvitadoInput {
+  nombre: string;
+  rut: string;
+  edad?: number | null;
+}
 
 export const InvitadosRepository = {
 
-  /** ============================================================
-   * 📌 Obtener invitados de una reserva
-   * ============================================================ */
+  /* --------------------------------------------------------
+   * Obtener invitados de una reserva
+   * -------------------------------------------------------- */
   obtenerPorReserva(reservaId: string) {
     return prisma.invitado.findMany({
       where: { reservaId },
     });
   },
 
-  /** ============================================================
-   * 🗑 Borrar invitados (uso normal)
-   * ============================================================ */
+  /* --------------------------------------------------------
+   * Borrar invitados (uso normal y transacciones)
+   * -------------------------------------------------------- */
   borrarPorReserva(reservaId: string) {
     return prisma.invitado.deleteMany({
       where: { reservaId },
     });
   },
 
-  /** ============================================================
-   * 🗑 RAW: Borrar invitados (para transacciones)
-   * Siempre devuelve un PrismaPromise
-   * ============================================================ */
   borrarPorReservaRaw(reservaId: string) {
     return prisma.invitado.deleteMany({
       where: { reservaId },
     });
   },
 
-  /** ============================================================
-   * ➕ Crear lista de invitados (uso normal)
-   * ============================================================ */
-  crearLista(reservaId: string, invitados: any[]) {
-    if (!invitados.length) {
-      // No hacemos nada
-      return prisma.$queryRaw`SELECT 1`;
+  /* --------------------------------------------------------
+   * Crear lista de invitados (normal)
+   * -------------------------------------------------------- */
+  crearLista(reservaId: string, invitados: InvitadoInput[]) {
+    if (!invitados || invitados.length === 0) {
+      return prisma.invitado.deleteMany({ where: { reservaId } });
     }
 
     return prisma.invitado.createMany({
@@ -50,13 +54,12 @@ export const InvitadosRepository = {
     });
   },
 
-  /** ============================================================
-   * ➕ RAW: Crear lista dentro de transacción
-   * Siempre devuelve un PrismaPromise
-   * ============================================================ */
-  crearListaRaw(reservaId: string, invitados: any[]) {
-    if (!invitados.length) {
-      return prisma.$queryRaw`SELECT 1`; // 🔵 SAFE
+  /* --------------------------------------------------------
+   * Crear lista dentro de transacción (RAW)
+   * -------------------------------------------------------- */
+  crearListaRaw(reservaId: string, invitados: InvitadoInput[]) {
+    if (!Array.isArray(invitados) || invitados.length === 0) {
+      return prisma.invitado.deleteMany({ where: { reservaId } });
     }
 
     return prisma.invitado.createMany({
@@ -68,5 +71,4 @@ export const InvitadosRepository = {
       })),
     });
   },
-
 };

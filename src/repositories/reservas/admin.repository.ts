@@ -1,6 +1,8 @@
-// src/repositories/reservas/admin.repository.ts
+// ============================================================
+// admin.repository.ts — ENAP 2025 (PRODUCTION READY)
+// ============================================================
 
-import { prisma } from "../../config/db";
+import { prisma } from "../../lib/db";
 import { Prisma, ReservaEstado } from "@prisma/client";
 
 export const ReservasAdminRepository = {
@@ -13,7 +15,7 @@ export const ReservasAdminRepository = {
   },
 
   /* ============================================================
-   * 📋 LISTADO ADMIN (con filtros + paginación)
+   * 📋 LISTADO ADMIN (full data → DTO aplica limpieza)
    * ============================================================ */
   listar(
     filtros: Prisma.ReservaWhereInput,
@@ -33,15 +35,30 @@ export const ReservasAdminRepository = {
             id: true,
             nombre: true,
             tipo: true,
+            descripcion: true,
+            capacidad: true,
+            imagenUrl: true,
+            modalidadCobro: true,
+
+            // TARIFAS Y SNAPSHOTS si admin quiere verlas
+            precioBaseSocio: true,
+            precioBaseExterno: true,
+            precioPersonaSocio: true,
+            precioPersonaExterno: true,
+            precioPiscinaSocio: true,
+            precioPiscinaExterno: true,
           },
         },
+
         user: {
           select: {
             id: true,
             name: true,
             email: true,
+            role: true,
           },
         },
+
         invitados: {
           select: {
             id: true,
@@ -50,13 +67,14 @@ export const ReservasAdminRepository = {
             edad: true,
           },
         },
-        pago: true, // 🔥 agregamos pago para coherencia con read.repository
+
+        pago: true,
       },
     });
   },
 
   /* ============================================================
-   * 🔄 ACTUALIZAR ESTADO RESERVA
+   * 🔄 ACTUALIZAR ESTADO RESERVA (y devolver full detalle)
    * ============================================================ */
   actualizarEstado(id: string, estado: ReservaEstado) {
     return prisma.reserva.update({
@@ -69,15 +87,29 @@ export const ReservasAdminRepository = {
             id: true,
             nombre: true,
             tipo: true,
+            descripcion: true,
+            capacidad: true,
+            imagenUrl: true,
+            modalidadCobro: true,
+
+            precioBaseSocio: true,
+            precioBaseExterno: true,
+            precioPersonaSocio: true,
+            precioPersonaExterno: true,
+            precioPiscinaSocio: true,
+            precioPiscinaExterno: true,
           },
         },
+
         user: {
           select: {
             id: true,
             name: true,
             email: true,
+            role: true,
           },
         },
+
         invitados: {
           select: {
             id: true,
@@ -86,6 +118,7 @@ export const ReservasAdminRepository = {
             edad: true,
           },
         },
+
         pago: true,
       },
     });

@@ -1,28 +1,33 @@
-// src/controllers/reservas/actualizar-estado.controller.ts
-
 import { Response } from "express";
 import type { AuthRequest } from "../../types/global";
 
 import { ActualizarEstadoReservaService } from "../../services/reservas";
 import { reservaToDTO } from "./utils/reservaToDTO";
+import { actualizarEstadoSchema } from "../../validators/reservas";
 
 export const actualizarEstado = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user || req.user.role !== "ADMIN") {
+      return res.status(403).json({ ok: false, error: "NO_AUTORIZADO_ADMIN" });
+    }
+
+    const payload = actualizarEstadoSchema.parse(req.body);
+
     const reserva = await ActualizarEstadoReservaService.ejecutar(
       req.params.id,
-      req.body.estado
+      payload.estado
     );
 
-    return res.json({
-      ok: true,
-      reserva: reservaToDTO(reserva),
-    });
+    return res.json({ ok: true, data: reservaToDTO(reserva) });
 
   } catch (error: any) {
     console.error("❌ [actualizar estado reserva]:", error);
 
-    return res
-      .status(400)
-      .json({ ok: false, error: error.message ?? "Error al actualizar estado" });
+    const status = error.message === "NOT_FOUND" ? 404 : 400;
+
+    return res.status(status).json({
+      ok: false,
+      error: error.message ?? "Error al actualizar estado",
+    });
   }
 };

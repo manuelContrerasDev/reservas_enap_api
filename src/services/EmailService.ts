@@ -112,6 +112,40 @@ const Templates = {
       </div>
     `;
   },
+
+  manualReservation(name: string, fecha: string, espacio: string, pagoUrl: string) {
+    return `
+      <div style="font-family: Arial; padding: 26px; color: #333;">
+        <h2 style="color:#003366; margin-bottom: 12px;">Hola ${escapeHtml(name)},</h2>
+
+        <p>
+          Se ha registrado una nueva reserva a tu nombre en la plataforma 
+          <b>ENAP Reservas</b>.
+        </p>
+
+        <div style="margin:16px 0; padding:12px 16px; background:#f2f6ff; border-left:4px solid #0b6efd;">
+          <p><b>Espacio:</b> ${escapeHtml(espacio)}</p>
+          <p><b>Fecha:</b> ${escapeHtml(fecha)}</p>
+        </div>
+
+        <p>Puedes completar el pago usando el siguiente enlace:</p>
+
+        <a href="${escapeHtml(pagoUrl)}"
+          style="display:inline-block; margin-top:10px; padding:12px 22px;
+                background:#0b6efd; color:white; text-decoration:none;
+                border-radius:6px; font-weight:bold;">
+          Completar Pago
+        </a>
+
+        <br/><br/>
+
+        <p style="font-size:13px; color:#666;">
+          Si tienes dudas, por favor comunícate con administración del Centro Recreativo ENAP.
+        </p>
+      </div>
+    `;
+  },
+
 };
 
 /* ============================================================
@@ -157,4 +191,31 @@ export const EmailService = {
       html,
     });
   },
+
+  //ADMIN- RESERVA-MANUAL
+  async sendManualReservationEmail({
+    to,
+    name,
+    fecha,
+    espacio,
+    pagoUrl,
+  }: {
+    to: string;
+    name: string | null;
+    fecha: string;
+    espacio: string;
+    pagoUrl: string;
+  }) {
+    const safeName =
+      name && name.trim().length > 0 ? name.trim() : "Usuario ENAP";
+
+    const html = Templates.manualReservation(safeName, fecha, espacio, pagoUrl);
+
+    return sendEmail({
+      to,
+      subject: "Nueva reserva registrada — ENAP Reservas",
+      html,
+    });
+  },
+
 };

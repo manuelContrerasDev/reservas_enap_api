@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { PagosController } from "../controllers/pagos.controller";
+import { PagosController } from "../controllers/pagos/pagos.controller";
 import { authGuard } from "../middlewares/authGuard";
 import { roleGuard } from "../middlewares/roleGuard";
 import { asyncHandler } from "../middlewares/asyncHandler";
@@ -27,7 +27,7 @@ router.get(
 );
 
 /* ============================================================
- * 3) Listado admin
+ * 3) Listado tesorería (ADMIN)
  * ============================================================ */
 router.get(
   "/admin",
@@ -38,7 +38,6 @@ router.get(
 
 /* ============================================================
  * 🔥 4) Webpay — webhook (server → server)
- *  → Debe ir ANTES de "/:id"
  * ============================================================ */
 router.post(
   "/webpay/notificacion",
@@ -47,7 +46,6 @@ router.post(
 
 /* ============================================================
  * 🔥 5) Webpay — retorno (browser → backend → front)
- *  → Debe ir ANTES de "/:id"
  * ============================================================ */
 router.get(
   "/webpay/retorno",

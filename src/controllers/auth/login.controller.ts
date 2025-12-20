@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { prisma } from "../../config/db";
+import { prisma } from "../../lib/db";
 import bcrypt from "bcryptjs";
 import { ZodError } from "zod";
 import { loginSchema } from "../../validators/auth.schema";

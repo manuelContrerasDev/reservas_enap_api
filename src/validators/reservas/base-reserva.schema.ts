@@ -1,81 +1,70 @@
 // src/validators/reservas/base-reserva.schema.ts
 import { z } from "zod";
 
+/* ============================================================
+ * Helpers
+ * ============================================================ */
+const emailSchema = z
+  .string()
+  .email("Correo inválido")
+  .transform(v => v.trim().toLowerCase());
+
+const textRequired = (msg = "Campo requerido") =>
+  z.string().trim().min(1, msg);
+
+const rutSchema = z.string().trim().min(3, "RUT inválido");
+const telSchema = z.string().trim().min(8, "Teléfono inválido");
+
+/* ============================================================
+ * Schema base de reserva (Step 1)
+ *  - SOLO estructura y tipos
+ *  - Reglas de negocio fuertes se hacen en services/helpers
+ * ============================================================ */
 export const baseReservaSchema = z.object({
+  /* ID espacio */
   espacioId: z.string().uuid("ID de espacio inválido"),
 
-  fechaInicio: z.string().min(5, "Fecha de inicio requerida"),
-  fechaFin: z.string().min(5, "Fecha de fin requerida"),
+  /* Fechas ISO (validación de negocio se hace en servicios/helpers) */
+  fechaInicio: z.string().datetime({ message: "Fecha inicio inválida" }),
+  fechaFin: z.string().datetime({ message: "Fecha fin inválida" }),
 
-  /* -------- DATOS SOCIO -------- */
-  nombreSocio: z.string().min(3, "Nombre del socio inválido"),
-  rutSocio: z.string().min(5, "RUT del socio inválido"),
-  telefonoSocio: z.string().min(5, "Teléfono inválido"),
-  correoEnap: z.string().email("Correo ENAP inválido"),
-  correoPersonal: z.string().email("Correo personal inválido").optional(),
+  /* Datos del socio */
+  nombreSocio: textRequired("Nombre requerido"),
+  rutSocio: rutSchema,
+  telefonoSocio: telSchema,
+  correoEnap: emailSchema,
+  correoPersonal: emailSchema.optional().nullable(),
 
-  /* -------- USO RESERVA -------- */
-  usoReserva: z.enum(
-    ["USO_PERSONAL", "CARGA_DIRECTA", "TERCEROS"],
-    { message: "Uso de reserva inválido" }
-  ),
-
+  /* Uso de reserva */
+  usoReserva: z.enum(["USO_PERSONAL", "CARGA_DIRECTA", "TERCEROS"]),
   socioPresente: z.boolean(),
 
-  /* -------- RESPONSABLE -------- */
-  nombreResponsable: z.string().optional(),
-  rutResponsable: z.string().optional(),
-  emailResponsable: z.string().email().optional(),
+  /* Responsable (llenado según reglas de negocio) */
+  nombreResponsable: z.string().nullable().optional(),
+  rutResponsable: z.string().nullable().optional(),
+  emailResponsable: emailSchema.nullable().optional(),
+  telefonoResponsable: telSchema.nullable().optional(),
 
-  /* -------- CANTIDADES -------- */
-  cantidadPersonas: z
-    .any()
-    .refine((v) => typeof v === "number", {
-      message: "La cantidad de personas debe ser un número",
-    })
-    .refine((v) => Number.isInteger(v), {
-      message: "Debe ser un número entero",
-    })
-    .refine((v) => v > 0, {
-      message: "Debe ser mayor a 0",
-    }),
-
-  cantidadPersonasPiscina: z
-    .any()
-    .refine((v) => typeof v === "number", {
-      message: "Debe ser un número",
-    })
-    .refine((v) => Number.isInteger(v), {
-      message: "Debe ser un número entero",
-    })
-    .refine((v) => v >= 0, {
-      message: "Debe ser 0 o mayor",
-    })
-    .default(0),
-
-  /* -------- TÉRMINOS -------- */
-  terminosAceptados: z
-    .boolean()
-    .refine((v) => v === true, {
-      message: "Debes aceptar los términos para continuar",
-    }),
-
-  terminosVersion: z.string().optional(),
-
-  /* -------- INVITADOS -------- */
+  /* Invitados */
   invitados: z
     .array(
       z.object({
-        nombre: z.string().min(2, "Nombre de invitado inválido"),
-        rut: z.string().min(5, "RUT de invitado inválido"),
-        edad: z
-          .any()
-          .refine(
-            (v) => typeof v === "number" || v === undefined,
-            { message: "Edad inválida" }
-          )
-          .optional(),
+        nombre: textRequired(),
+        rut: textRequired(),
+        edad: z.number().int().min(0).nullable().optional(),
+        esPiscina: z.boolean().optional().default(false),
       })
     )
-    .optional(),
+    .default([]),
+
+  /* Piscina directo (dato de front para cálculo) */
+  cantidadPersonasPiscina: z.number().int().min(0).default(0),
+
+  /* Términos */
+  terminosAceptados: z.boolean().refine(v => v === true, {
+    message: "Debes aceptar los términos",
+  }),
+  terminosVersion: z.string().nullable().optional(),
 });
+
+export type BaseReservaType = z.infer<typeof baseReservaSchema>;

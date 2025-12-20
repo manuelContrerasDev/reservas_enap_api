@@ -5,7 +5,7 @@ export const piscinaFechaSchema = z.object({
   fecha: z
     .string()
     .min(5, "La fecha es requerida")
-    .refine((v) => !isNaN(new Date(v).getTime()), {
+    .refine(v => !isNaN(new Date(v).getTime()), {
       message: "Fecha inválida",
     }),
 });

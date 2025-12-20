@@ -1,5 +1,4 @@
 // src/validators/reservas/filtros-admin.schema.ts
-
 import { z } from "zod";
 import { ReservaEstado } from "@prisma/client";
 
@@ -7,13 +6,17 @@ export const adminReservasQuerySchema = z.object({
   estado: z
     .string()
     .optional()
-    .refine((v) => !v || v === "TODOS" || Object.values(ReservaEstado).includes(v as any), {
-      message: "Estado inválido",
-    }),
+    .refine(
+      v => !v || v === "TODOS" || Object.values(ReservaEstado).includes(v as any),
+      {
+        message: "Estado inválido",
+      }
+    ),
 
   espacioId: z.string().uuid().optional(),
 
-  socioId: z.string().optional(), // búsqueda texto
+  // 👇 nombre del campo sincronizado con el service (socio)
+  socio: z.string().optional(), // búsqueda texto libre
 
   fechaInicio: z.string().optional(),
   fechaFin: z.string().optional(),
@@ -21,7 +24,10 @@ export const adminReservasQuerySchema = z.object({
   page: z.string().regex(/^\d+$/).optional(),
   limit: z.string().regex(/^\d+$/).optional(),
 
-  sort: z.enum(["fechaInicio", "fechaFin", "estado", "totalClp"]).optional(),
+  // añadimos nombreSocio, que el service ya soporta
+  sort: z
+    .enum(["fechaInicio", "fechaFin", "estado", "totalClp", "nombreSocio"])
+    .optional(),
   order: z.enum(["asc", "desc"]).optional(),
 });
 

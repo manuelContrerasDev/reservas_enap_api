@@ -1,6 +1,6 @@
 // src/repositories/espacios.repository.ts
 
-import { prisma } from "../config/db";
+import { prisma } from "../lib/db";
 import { Prisma, ReservaEstado } from "@prisma/client";
 
 export const EspaciosRepository = {

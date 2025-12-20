@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { prisma } from "../../config/db";
+import { prisma } from "../../lib/db";
 import type { AuthRequest } from "../../types/global";
 
 export const me = async (req: AuthRequest, res: Response) => {
@@ -12,7 +12,7 @@ export const me = async (req: AuthRequest, res: Response) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: req.user.sub },
+      where: { id: req.user.id },
       select: {
         id: true,
         email: true,

@@ -1,42 +1,61 @@
-// src/controllers/reservas/actualizar-invitados.controller.ts
+// ============================================================
+// actualizar-invitados.controller.ts — ENAP 2025 (FINAL)
+// ============================================================
 
 import { Response } from "express";
-import { ActualizarInvitadosReservaService } from "../../services/reservas/actualizar-invitados.service";
 import type { AuthRequest } from "../../types/global";
+
+import { actualizarInvitadosSchema } from "../../validators/reservas";
+import { ActualizarInvitadosReservaService } from "../../services/reservas/actualizar-invitados.service";
+import { reservaToDTO } from "./utils/reservaToDTO";
 
 export const actualizarInvitados = async (req: AuthRequest, res: Response) => {
   try {
-    const reservaId = req.params.id;
+    // --------------------------------------------------------
+    // 1) Validar payload
+    // --------------------------------------------------------
+    const payload = actualizarInvitadosSchema.parse(req.body);
 
-    const reservaActualizada = await ActualizarInvitadosReservaService.ejecutar(
-      reservaId,
-      req.body,
+    // --------------------------------------------------------
+    // 2) Ejecutar service
+    // --------------------------------------------------------
+    const reserva = await ActualizarInvitadosReservaService.ejecutar(
+      req.params.id,
+      payload,
       req.user
     );
 
     return res.json({
       ok: true,
       message: "Invitados actualizados correctamente",
-      data: reservaActualizada,
+      data: reservaToDTO(reserva),
     });
 
   } catch (error: any) {
-    console.error("❌ [actualizar invitados]:", error.message);
+    console.error("❌ [actualizar invitados]:", error);
 
-    const map: Record<string, number> = {
+    const statusMap: Record<string, number> = {
       NO_AUTH: 401,
       NOT_FOUND: 404,
       NO_PERMITIDO: 403,
-      NO_PERMITIDO_TIEMPO: 400,
-      INVITADOS_INVALIDOS: 400,
-      CANTIDAD_INCORRECTA: 400,
+
+      // Reglas de negocio
+      RESERVA_NO_MODIFICABLE: 409,
+      NO_PERMITIDO_TIEMPO: 409,
+      FUERA_DE_VENTANA_EDICION: 409,
+
+      // Validaciones
+      INVITADOS_INVALIDOS: 422,
+      INVITADO_DATOS_INVALIDOS: 422,
+      EDAD_INVITADO_INVALIDA: 422,
+      CANTIDAD_ADULTOS_SUPERADA: 409,
     };
 
-    const status = map[error.message] ?? 500;
+    const status = statusMap[error.message] ?? 500;
 
     return res.status(status).json({
       ok: false,
-      error: error.message || "Error al actualizar invitados",
+      error: error.message ?? "Error al actualizar invitados",
     });
   }
 };

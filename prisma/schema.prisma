@@ -7,127 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --------------------------------------
+// MODULO USUARIOS
+// --------------------------------------
+
 model User {
-  id                     String               @id @default(uuid())
-  email                  String               @unique
-  passwordHash           String
-  name                   String?
-  role                   Role                 @default(SOCIO)
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  emailConfirmed         Boolean              @default(false)
-  emailConfirmToken      String?              @unique
-  emailConfirmExpires    DateTime?
-  authorizationsReceived GuestAuthorization[] @relation("UserReceived")
-  authorizationsGiven    GuestAuthorization[] @relation("UserGiven")
-  resetTokens            PasswordResetToken[]
-  reservas               Reserva[]
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  rut          String?
+  role         Role     @default(SOCIO)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  emailConfirmed      Boolean   @default(false)
+  emailConfirmToken   String?   @unique
+  emailConfirmExpires DateTime?
+
+  // Relaciones
+  resetTokens PasswordResetToken[]
+
+  reservas Reserva[] @relation("ReservasPorUsuario")
+  reservasCreadas Reserva[] @relation("ReservasCreadasPorAdmin")
+
+  auditLogs AuditLog[]
 
   @@index([role])
-}
-
-model GuestAuthorization {
-  id         String   @id @default(uuid())
-  socioId    String
-  invitadoId String
-  createdAt  DateTime @default(now())
-  invitado   User     @relation("UserReceived", fields: [invitadoId], references: [id])
-  socio      User     @relation("UserGiven", fields: [socioId], references: [id])
-
-  @@unique([socioId, invitadoId])
-}
-
-model Espacio {
-  id                     String         @id @default(uuid())
-  nombre                 String
-  tipo                   TipoEspacio
-  capacidad              Int
-  capacidadExtra         Int?
-  tarifaClp              Int
-  tarifaExterno          Int?
-  extraSocioPorPersona   Int?
-  extraTerceroPorPersona Int?
-  descripcion            String?
-  imagenUrl              String?
-  activo                 Boolean        @default(true)
-  modalidadCobro         ModalidadCobro @default(POR_NOCHE)
-  createdAt              DateTime       @default(now())
-  updatedAt              DateTime       @updatedAt
-  reservas               Reserva[]
-
-  @@index([tipo, activo])
-}
-
-model Reserva {
-  id                String        @id @default(uuid())
-  userId            String
-  espacioId         String
-  fechaInicio       DateTime
-  fechaFin          DateTime
-  dias              Int
-  totalClp          Int
-  estado            ReservaEstado @default(PENDIENTE)
-  nombreSocio       String
-  rutSocio          String
-  telefonoSocio     String
-  correoEnap        String
-  correoPersonal    String?
-  usoReserva        UsoReserva    @default(USO_PERSONAL)
-  socioPresente     Boolean       @default(true)
-  nombreResponsable String?
-  rutResponsable    String?
-  emailResponsable  String?
-  cantidadPersonas  Int
-  terminosAceptados Boolean       @default(false)
-  terminosVersion   String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  invitados         Invitado[]
-  pago              Pago?
-  espacio           Espacio       @relation(fields: [espacioId], references: [id])
-  user              User          @relation(fields: [userId], references: [id])
-  
-  precioBaseSnapshot Int? //Cuanto costaba
-  descuentoAplicado  Int  //Si aplica beneficio piscinaGrat
-
-  @@index([estado])
-  @@index([fechaInicio, fechaFin])
-  @@index([espacioId, fechaInicio, fechaFin])
-}
-
-model Invitado {
-  id        String  @id @default(uuid())
-  reservaId String
-  nombre    String
-  rut       String
-  edad      Int?
-  reserva   Reserva @relation(fields: [reservaId], references: [id])
-}
-
-model Pago {
-  id                 String        @id @default(uuid())
-  reservaId          String        @unique
-  provider           String
-  sessionId          String?
-  amountClp          Int
-  status             PaymentStatus @default(CREATED)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  accountingDate     String?
-  buyOrder           String?
-  installmentsNumber Int?
-  paymentTypeCode    String?
-  rawResponse        Json?
-  responseCode       Int?
-  responseMessage    String?
-  token              String?
-  transactionDate    String?
-  reserva            Reserva       @relation(fields: [reservaId], references: [id])
-
-  @@index([status])
-  @@index([token])
-  @@index([buyOrder])
-  @@index([createdAt])
 }
 
 model PasswordResetToken {
@@ -141,22 +47,171 @@ model PasswordResetToken {
   @@index([userId, expiresAt])
 }
 
+// --------------------------------------
+// MODULO ESPACIOS (Precios Granulares)
+// --------------------------------------
+
+model Espacio {
+  id             String         @id @default(uuid())
+  nombre         String
+  tipo           TipoEspacio
+  capacidad      Int
+  descripcion    String?
+  imagenUrl      String?
+  activo         Boolean        @default(true)
+  modalidadCobro ModalidadCobro @default(POR_NOCHE)
+
+  // --- TARIFAS BASE (Por Noche/Día) ---
+  precioBaseSocio   Int @default(0)
+  precioBaseExterno Int @default(0)
+
+  // --- TARIFAS POR PERSONA (Access Fee) ---
+  precioPersonaSocio   Int @default(3500)
+  precioPersonaExterno Int @default(4500)
+
+  // --- TARIFAS PISCINA ---
+  precioPiscinaSocio   Int @default(3500)
+  precioPiscinaExterno Int @default(4500)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  reservas  Reserva[]
+
+  @@index([tipo, activo])
+}
+
+// --------------------------------------
+// MODULO RESERVAS
+// --------------------------------------
+
+model Reserva {
+  id        String @id @default(uuid())
+  userId    String
+  espacioId String
+
+  fechaInicio DateTime
+  fechaFin    DateTime
+  dias        Int
+
+  expiresAt DateTime? // Regla 24h
+
+  usoReserva UsoReserva    @default(USO_PERSONAL)
+  estado     ReservaEstado @default(PENDIENTE_PAGO)
+
+  // Datos Contacto
+  nombreSocio    String
+  rutSocio       String
+  telefonoSocio  String
+  correoEnap     String
+  correoPersonal String?
+
+  nombreResponsable String?
+  rutResponsable    String?
+  emailResponsable  String?
+  telefonoResponsable  String?
+
+  // Cantidades para la calculadora
+  cantidadAdultos Int @default(1)
+  cantidadNinos   Int @default(0)
+  cantidadPiscina Int @default(0)
+
+  // Snapshots (Auditoría Financiera)
+  precioBaseSnapshot    Int @default(0)
+  precioPersonaSnapshot Int @default(0)
+  precioPiscinaSnapshot Int @default(0)
+
+  totalClp Int
+
+  terminosAceptados Boolean @default(false)
+  terminosVersion   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // RESERVAS MANUALES (ADMIN)
+  creadaPor      String?
+  adminCreador   User?     @relation("ReservasCreadasPorAdmin", fields: [creadaPor], references: [id])
+
+
+  invitados Invitado[]
+  pago      Pago?
+  espacio   Espacio @relation(fields: [espacioId], references: [id])
+  user User @relation("ReservasPorUsuario", fields: [userId], references: [id])
+
+  @@index([estado])
+  @@index([fechaInicio, fechaFin])
+}
+
+
+model Invitado {
+  id        String  @id @default(uuid())
+  reservaId String
+  nombre    String
+  rut       String
+  edad      Int?
+  esPiscina Boolean @default(false)
+
+  reserva Reserva @relation(fields: [reservaId], references: [id])
+}
+
+// --------------------------------------
+// MODULO PAGOS
+// --------------------------------------
+
+model Pago {
+  id        String @id @default(uuid())
+  reservaId String @unique
+
+  // WebPay Identifiers
+  buyOrder  String  @unique // IMPORTANTE: @unique para seguridad
+  token     String? @unique
+  sessionId String?
+
+  provider  String
+  amountClp Int
+  status    PaymentStatus @default(CREATED)
+
+  authorizationCode String?
+  transactionDate   String?
+  paymentTypeCode   String?
+  responseCode      Int?
+  rawResponse       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reserva Reserva @relation(fields: [reservaId], references: [id])
+
+  @@index([status])
+  @@index([buyOrder])
+}
+
+// --------------------------------------
+// MODULO LOGS
+// --------------------------------------
+
 model AuditLog {
-  id          String   @id @default(uuid())
-  action      String   // EJ: "CREAR_RESERVA", "ELIMINAR_ESPACIO", "CAMBIO_TARIFA"
-  entity      String   // EJ: "Reserva", "Espacio"
-  entityId    String   // ID del objeto afectado
-  userId      String   // Quién hizo la acción (Admin o Socio)
-  details     Json?    // Guardar el estado anterior y nuevo (diff)
-  ipAddress   String?  // Seguridad extra
-  createdAt   DateTime @default(now())
-  
-  user        User     @relation(fields: [userId], references: [id])
+  id        String   @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String
+  userId    String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  before Json?
+  after  Json?
+
+  // Relación
+  user User? @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([entityId])
-  @@index([action])
 }
+
+// --------------------------------------
+// ENUMS
+// --------------------------------------
 
 enum TipoEspacio {
   CABANA
@@ -183,12 +238,12 @@ enum UsoReserva {
 }
 
 enum ReservaEstado {
-  PENDIENTE
+  PENDIENTE_PAGO
   CONFIRMADA
   CANCELADA
   RECHAZADA
-  PENDIENTE_PAGO
   CADUCADA
+  FINALIZADA
 }
 
 enum PaymentStatus {

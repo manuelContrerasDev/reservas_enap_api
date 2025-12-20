@@ -1,9 +1,8 @@
 // src/middlewares/roleGuard.ts
 import { Response, NextFunction } from "express";
-import type { AuthRequest } from "../types/global";
-import { Role } from "@prisma/client";
+import type { AuthRequest, UserRole } from "../types/global";
 
-export const roleGuard = (allowedRoles: Role[]) => {
+export const roleGuard = (allowedRoles: UserRole[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({
@@ -12,14 +11,7 @@ export const roleGuard = (allowedRoles: Role[]) => {
       });
     }
 
-    const userRole = req.user.role as Role;
-
-    if (!Object.values(Role).includes(userRole)) {
-      return res.status(403).json({
-        ok: false,
-        message: `Rol no reconocido: ${userRole}`,
-      });
-    }
+    const userRole = req.user.role;
 
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({

@@ -1,6 +1,6 @@
 // src/repositories/reservas/delete.repository.ts
 
-import { prisma } from "../../config/db";
+import { prisma } from "../../lib/db";
 
 export const ReservasDeleteRepository = {
 
