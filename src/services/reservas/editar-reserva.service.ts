@@ -1,34 +1,31 @@
-// ============================================================
-// editar-reserva.service.ts — ENAP 2025 (FINAL)
-// ============================================================
-
 import { prisma } from "../../lib/db";
-import { ReservaEstado } from "@prisma/client";
+import { ReservaEstado, PaymentStatus } from "@prisma/client";
 import type { AuthUser } from "../../types/global";
+import type { EditReservaType } from "../../validators/reservas/edit-reserva.schema";
 
 export const EditarReservaService = {
-  async ejecutar(reservaId: string, data: any, user: AuthUser) {
+  async ejecutar(reservaId: string, data: EditReservaType, user: AuthUser) {
     if (!user) throw new Error("NO_AUTH");
 
-    // --------------------------------------------------------
-    // 1) Obtener reserva
-    // --------------------------------------------------------
+    // 🔐 SOLO ADMIN
+    if (user.role !== "ADMIN") {
+      throw new Error("NO_PERMITIDO");
+    }
+
     const reserva = await prisma.reserva.findUnique({
       where: { id: reservaId },
+      include: {
+        pago: {
+          select: { status: true },
+        },
+      },
     });
 
     if (!reserva) throw new Error("NOT_FOUND");
 
-    // --------------------------------------------------------
-    // 2) Permisos
-    // --------------------------------------------------------
-    if (user.role !== "ADMIN" && reserva.userId !== user.id) {
-      throw new Error("NO_PERMITIDO");
-    }
-
-    // --------------------------------------------------------
-    // 3) Estados bloqueados
-    // --------------------------------------------------------
+    /* ============================================================
+     * ⛔ ESTADOS BLOQUEADOS
+     * ============================================================ */
     const estadosBloqueados: ReservaEstado[] = [
       ReservaEstado.CANCELADA,
       ReservaEstado.RECHAZADA,
@@ -40,9 +37,16 @@ export const EditarReservaService = {
       throw new Error("RESERVA_NO_MODIFICABLE");
     }
 
-    // --------------------------------------------------------
-    // 4) Bloqueo por fecha (reserva ya en curso)
-    // --------------------------------------------------------
+    /* ============================================================
+     * 💳 BLOQUEO POR PAGO APROBADO
+     * ============================================================ */
+    if (reserva.pago?.status === PaymentStatus.APPROVED) {
+      throw new Error("PAGO_CONFIRMADO");
+    }
+
+    /* ============================================================
+     * 📅 BLOQUEO POR FECHA (HOY O PASADO)
+     * ============================================================ */
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
@@ -53,47 +57,60 @@ export const EditarReservaService = {
       throw new Error("NO_PERMITIDO_TIEMPO");
     }
 
-    // --------------------------------------------------------
-    // 5) Campos permitidos (whitelist)
-    // --------------------------------------------------------
-    const payload: any = {
+    /* ============================================================
+     * 🧠 NORMALIZACIÓN DE DATOS PERMITIDOS
+     * ============================================================ */
+    const updateData = {
       nombreSocio: data.nombreSocio,
       rutSocio: data.rutSocio,
       telefonoSocio: data.telefonoSocio,
       correoEnap: data.correoEnap,
       correoPersonal: data.correoPersonal ?? null,
-      usoReserva: data.usoReserva,
-      socioPresente: data.socioPresente,
-      nombreResponsable: data.nombreResponsable ?? null,
-      rutResponsable: data.rutResponsable ?? null,
-      emailResponsable: data.emailResponsable ?? null,
-      telefonoResponsable: data.telefonoResponsable ?? null,
+
+      // Responsable solo si socio NO está presente
+      nombreResponsable: data.socioPresente ? null : data.nombreResponsable ?? null,
+      rutResponsable: data.socioPresente ? null : data.rutResponsable ?? null,
+      emailResponsable: data.socioPresente ? null : data.emailResponsable ?? null,
+      telefonoResponsable: data.socioPresente
+        ? null
+        : data.telefonoResponsable ?? null,
     };
 
-    // limpiar undefined
-    Object.keys(payload).forEach(
-      (k) => payload[k] === undefined && delete payload[k]
-    );
-
-    // --------------------------------------------------------
-    // 6) Actualizar reserva
-    // --------------------------------------------------------
-    const actualizada = await prisma.reserva.update({
-      where: { id: reservaId },
-      data: payload,
+    // Limpieza defensiva
+    Object.keys(updateData).forEach((k) => {
+      if (updateData[k as keyof typeof updateData] === undefined) {
+        delete updateData[k as keyof typeof updateData];
+      }
     });
 
-    // --------------------------------------------------------
-    // 7) AuditLog
-    // --------------------------------------------------------
+    /* ============================================================
+     * 📝 UPDATE CONTROLADO
+     * ============================================================ */
+    const actualizada = await prisma.reserva.update({
+      where: { id: reservaId },
+      data: updateData,
+    });
+
+    /* ============================================================
+     * 📜 AUDIT LOG (NO BLOQUEANTE)
+     * ============================================================ */
     prisma.auditLog
       .create({
         data: {
-          action: "EDITAR_RESERVA",
+          action: "EDITAR_RESERVA_ADMIN",
           entity: "Reserva",
           entityId: reservaId,
           userId: user.id,
-          details: payload,
+          before: {
+            nombreSocio: reserva.nombreSocio,
+            telefonoSocio: reserva.telefonoSocio,
+            correoPersonal: reserva.correoPersonal,
+            nombreResponsable: reserva.nombreResponsable,
+            rutResponsable: reserva.rutResponsable,
+            emailResponsable: reserva.emailResponsable,
+            telefonoResponsable: reserva.telefonoResponsable,
+          },
+          after: updateData,
         },
       })
       .catch(() => {});

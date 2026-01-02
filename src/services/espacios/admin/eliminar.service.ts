@@ -1,11 +1,29 @@
 // src/services/espacios/admin/eliminar.service.ts
 
 import { EspaciosRepository } from "../../../repositories/espacios.repository";
+import { toEspacioDTO } from "../helpers";
 
+/**
+ * Eliminar espacio (ADMIN)
+ * ⚠️ NO elimina físicamente
+ * - Equivale a soft-delete
+ * - Retira del catálogo
+ * - Bloquea nuevas reservas
+ * - Mantiene historial
+ */
 export async function eliminarService(id: string) {
-  const exists = await EspaciosRepository.findById(id);
-  if (!exists) throw new Error("ESPACIO_NOT_FOUND");
+  const espacio = await EspaciosRepository.findById(id);
 
-  await EspaciosRepository.delete(id);
-  return { ok: true };
+  if (!espacio) {
+    throw new Error("ESPACIO_NOT_FOUND");
+  }
+
+  // 🔒 Idempotente: si ya está eliminado, no repetir acción
+  if (!espacio.activo && !espacio.visible) {
+    return toEspacioDTO(espacio);
+  }
+
+  const updated = await EspaciosRepository.softDelete(id);
+
+  return toEspacioDTO(updated);
 }

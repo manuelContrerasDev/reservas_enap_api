@@ -9,9 +9,9 @@ import { disponibilidadPiscina } from "./disponibilidad-piscina.controller";
 import { actualizarInvitados } from "./actualizar-invitados.controller";
 import { editarReserva } from "./editar-reserva.controller";
 
-import { obtenerReservasAdmin } from "../admin/reservas/obtener-reservas.controller";
-import { eliminarReservaAdmin } from "../admin/reservas/eliminar-reserva.controller";
-import { crearReservaManualAdmin } from "../admin/reservas/crear-manual.controller";
+import { obtenerReservasAdmin } from "./admin/admin-list.controller";
+import { eliminarReservaAdmin } from "./admin/eliminar-reserva.controller";
+import { crearReservaManualAdmin } from "./admin/crear-manual.controller";
 
 export const ReservasController = {
   crearReservaManualAdmin,

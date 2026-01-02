@@ -7,10 +7,10 @@ import { DisponibilidadPiscinaService } from "../../services/reservas";
 
 export const disponibilidadPiscina = async (req: AuthRequest, res: Response) => {
   try {
-    // 1) Validar query
-    const { fecha } = piscinaFechaSchema.parse({ fecha: req.query.fecha });
+    const { fecha } = piscinaFechaSchema.parse({
+      fecha: req.query.fecha,
+    });
 
-    // 2) Ejecutar service
     const data = await DisponibilidadPiscinaService.ejecutar(fecha);
 
     return res.json({ ok: true, data });

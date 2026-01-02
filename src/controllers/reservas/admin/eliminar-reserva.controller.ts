@@ -4,11 +4,8 @@ import { EliminarReservaService } from "../../../services/reservas";
 
 export const eliminarReservaAdmin = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ ok: false, error: "NO_AUTH" });
-    }
-
-    await EliminarReservaService.ejecutar(req.params.id, req.user);
+    // 🔐 auth + rol garantizados por router
+    await EliminarReservaService.ejecutar(req.params.id, req.user!);
 
     return res.json({
       ok: true,
@@ -16,17 +13,19 @@ export const eliminarReservaAdmin = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (err: any) {
-    console.error("❌ [admin eliminar reserva]:", err);
+    const message = err?.message ?? "Error al eliminar reserva";
+
+    console.error("❌ [admin eliminar reserva]:", message);
 
     const map: Record<string, number> = {
-      NO_AUTH: 401,
-      NO_ADMIN: 403,
+      NO_AUTORIZADO_ADMIN: 403,
       NOT_FOUND: 404,
+      RESERVA_NO_ELIMINABLE: 409,
     };
 
-    return res.status(map[err.message] ?? 500).json({
+    return res.status(map[message] ?? 500).json({
       ok: false,
-      error: err.message,
+      error: message,
     });
   }
 };

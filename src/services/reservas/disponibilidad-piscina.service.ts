@@ -1,8 +1,9 @@
 // ============================================================
-// disponibilidad-piscina.service.ts — ENAP 2025 (VERSIÓN FINAL)
+// disponibilidad-piscina.service.ts — ENAP 2025 (FINAL)
 // ============================================================
 
 import { PiscinaRepository } from "../../repositories/reservas";
+import { ReservaEstado } from "@prisma/client";
 
 export const DisponibilidadPiscinaService = {
   async ejecutar(fechaISO: string) {
@@ -14,11 +15,11 @@ export const DisponibilidadPiscinaService = {
     const fecha = new Date(fechaISO);
     if (isNaN(fecha.getTime())) throw new Error("FECHA_INVALIDA");
 
-    // 🔥 Normalizar fecha (evita desfase por zona horaria)
+    // Normalizar fecha (evita desfase por zona horaria)
     fecha.setHours(0, 0, 0, 0);
 
     /* --------------------------------------------------------
-     * 2) Obtener reservas del día
+     * 2) Obtener reservas activas del día
      * -------------------------------------------------------- */
     const reservas = await PiscinaRepository.reservasPorFecha(fecha);
 
@@ -30,10 +31,10 @@ export const DisponibilidadPiscinaService = {
       throw new Error("ESPACIO_PISCINA_NO_CONFIGURADO");
     }
 
-    const capacidadMax = espacioPiscina.capacidad ?? 80; // fallback seguro
+    const capacidadMax = espacioPiscina.capacidad ?? 80;
 
     /* --------------------------------------------------------
-     * 4) Sumar cantidadPiscina oficial (ENAP 2025)
+     * 4) Sumar cantidadPiscina SOLO estados activos
      * -------------------------------------------------------- */
     const reservado = reservas.reduce(
       (acc, r) => acc + (r.cantidadPiscina ?? 0),

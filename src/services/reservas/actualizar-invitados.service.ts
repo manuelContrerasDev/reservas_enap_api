@@ -1,56 +1,35 @@
-// ============================================================
-// actualizar-invitados.service.ts — ENAP 2025 (FINAL APLICADO)
-// ============================================================
-
+// src/services/reservas/actualizar-invitados.service.ts
 import { prisma } from "../../lib/db";
 import { ReservaEstado, TipoEspacio } from "@prisma/client";
-import { InvitadosRepository } from "../../repositories/reservas/invitados.repository";
+import type { ActualizarInvitadosType } from "../../validators/reservas/actualizar-invitados.schema";
+import type { AuthUser } from "../../types/global";
+import { ReservasUpdateRepository } from "../../repositories/reservas/update.repository";
 
-type InvitadoInput = {
-  id?: string;
+type InvitadoLimpio = {
   nombre: string;
   rut: string;
-  edad?: number | null;
-  esPiscina?: boolean;
+  edad: number | null;
+  esPiscina: boolean;
 };
 
 export const ActualizarInvitadosReservaService = {
-  async ejecutar(reservaId: string, data: any, user: any) {
+  async ejecutar(reservaId: string, data: ActualizarInvitadosType, user: AuthUser) {
     if (!user) throw new Error("NO_AUTH");
+    if (!data || !Array.isArray(data.invitados)) throw new Error("INVITADOS_INVALIDOS");
 
-    // --------------------------------------------------------
-    // 1) Validar payload básico
-    // --------------------------------------------------------
-    if (!data || !Array.isArray(data.invitados)) {
-      throw new Error("INVITADOS_INVALIDOS");
-    }
-
-    const invitadosInput = data.invitados as InvitadoInput[];
-
-    // --------------------------------------------------------
-    // 2) Obtener reserva actual
-    // --------------------------------------------------------
+    // 1) Obtener reserva (para permisos + estados + reglas)
     const reserva = await prisma.reserva.findUnique({
       where: { id: reservaId },
-      include: {
-        invitados: true,
-        espacio: true,
-        user: true,
-      },
+      include: { invitados: true, espacio: true },
     });
-
     if (!reserva) throw new Error("NOT_FOUND");
 
-    // --------------------------------------------------------
-    // 3) Permisos
-    // --------------------------------------------------------
+    // 2) Permisos
     if (user.role !== "ADMIN" && reserva.userId !== user.id) {
       throw new Error("NO_PERMITIDO");
     }
 
-    // --------------------------------------------------------
-    // 4) Estados donde NO se permite modificar
-    // --------------------------------------------------------
+    // 3) Estados bloqueados
     const estadosNoModificables: ReservaEstado[] = [
       ReservaEstado.CANCELADA,
       ReservaEstado.RECHAZADA,
@@ -58,89 +37,68 @@ export const ActualizarInvitadosReservaService = {
       ReservaEstado.CADUCADA,
       ReservaEstado.CONFIRMADA,
     ];
-
     if (estadosNoModificables.includes(reserva.estado)) {
       throw new Error("RESERVA_NO_MODIFICABLE");
     }
 
-    // --------------------------------------------------------
-    // 5) Ventana de edición: máximo 24 horas desde creación
-    // --------------------------------------------------------
+    // 4) Ventana 24h
     const ahora = new Date();
-    const limiteEdicion = new Date(
-      reserva.createdAt.getTime() + 24 * 60 * 60 * 1000
-    );
+    const limite = new Date(reserva.createdAt.getTime() + 24 * 60 * 60 * 1000);
+    if (ahora > limite) throw new Error("FUERA_DE_VENTANA_EDICION");
 
-    if (ahora > limiteEdicion) {
-      throw new Error("FUERA_DE_VENTANA_EDICION");
-    }
-
-    // --------------------------------------------------------
-    // 6) Bloqueo por fecha de uso (día del evento)
-    // --------------------------------------------------------
+    // 5) No permitir día del evento
     const inicio = new Date(reserva.fechaInicio);
     inicio.setHours(0, 0, 0, 0);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    if (hoy >= inicio) throw new Error("NO_PERMITIDO_TIEMPO");
 
-    if (ahora >= inicio) {
-      throw new Error("NO_PERMITIDO_TIEMPO");
-    }
+    // 6) Limpieza + validación suave
+    const invitadosLimpios: InvitadoLimpio[] = data.invitados.map((i) => {
+      const nombre = String(i.nombre ?? "").trim();
+      const rut = String(i.rut ?? "").trim();
 
-    // --------------------------------------------------------
-    // 7) Limpieza y validación suave de invitados
-    // --------------------------------------------------------
-    const invitadosLimpios = invitadosInput.map((raw) => {
-      const nombre = String(raw.nombre ?? "").trim();
-      const rut = String(raw.rut ?? "").trim();
       const edad =
-        raw.edad === undefined || raw.edad === null
-          ? null
-          : Number(raw.edad);
+        i.edad === undefined || i.edad === null ? null : Number(i.edad);
 
-      const esPiscina =
-        raw.esPiscina === undefined ? false : Boolean(raw.esPiscina);
+      const esPiscina = i.esPiscina ?? false;
 
       if (!nombre || !rut) throw new Error("INVITADO_DATOS_INVALIDOS");
 
-      if (edad != null && (Number.isNaN(edad) || edad < 0)) {
-        throw new Error("EDAD_INVITADO_INVALIDA");
+      if (edad != null) {
+        if (Number.isNaN(edad) || !Number.isInteger(edad) || edad < 0) {
+          throw new Error("EDAD_INVITADO_INVALIDA");
+        }
       }
 
       return { nombre, rut, edad, esPiscina };
     });
 
-    // --------------------------------------------------------
-    // 8) Validación suave por tipo de espacio
-    // --------------------------------------------------------
+    // 7) Regla ENAP coherente:
+    // Para NO piscina, no permitir más adultos invitados que los adultos declarados en la reserva.
     if (reserva.espacio.tipo !== TipoEspacio.PISCINA) {
-      const adultosInvitados = invitadosLimpios.filter(
-        (i) => (i.edad ?? 0) >= 12
-      ).length;
-
-      const adultosPermitidos = reserva.cantidadAdultos;
+      const adultosInvitados = invitadosLimpios.filter((x) => (x.edad ?? 0) >= 12).length;
+      const adultosPermitidos = reserva.cantidadAdultos ?? 0;
 
       if (adultosInvitados > adultosPermitidos) {
         throw new Error("CANTIDAD_ADULTOS_SUPERADA");
       }
     }
 
-    // --------------------------------------------------------
-    // 9) Transacción: reemplazo completo de invitados
-    // --------------------------------------------------------
-    await prisma.$transaction([
-      InvitadosRepository.borrarPorReservaRaw(reservaId),
-      InvitadosRepository.crearListaRaw(reservaId, invitadosLimpios),
-    ]);
+    // 8) TX: reemplazo completo
+    await ReservasUpdateRepository.transaction(async (tx) => {
+      await ReservasUpdateRepository.borrarInvitados(tx, reservaId);
+      await ReservasUpdateRepository.crearInvitados(tx, reservaId, invitadosLimpios);
+    });
 
-    // --------------------------------------------------------
-    // 10) AuditLog (no bloqueante)
-    // --------------------------------------------------------
+    // 9) AuditLog (no bloqueante)
     prisma.auditLog
       .create({
         data: {
           action: "ACTUALIZAR_INVITADOS",
           entity: "Reserva",
           entityId: reservaId,
-          userId: user.id ?? null,
+          userId: user.id,
           details: {
             antes: reserva.invitados,
             despues: invitadosLimpios,
@@ -149,9 +107,7 @@ export const ActualizarInvitadosReservaService = {
       })
       .catch(() => {});
 
-    // --------------------------------------------------------
-    // 11) Devolver reserva actualizada
-    // --------------------------------------------------------
+    // 10) Retornar reserva actualizada
     return prisma.reserva.findUnique({
       where: { id: reservaId },
       include: {

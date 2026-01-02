@@ -1,26 +1,20 @@
 // src/services/espacios/socio/disponibilidad.service.ts
 
-import { prisma } from "../../../lib/db";
-import { ReservaEstado } from "@prisma/client";
-import { getEspacioOr404 } from "../helpers";
+import { EspaciosRepository } from "../../../repositories/espacios.repository";
 
 export async function disponibilidadService(id: string) {
-  const espacio = await getEspacioOr404(id);
+  // El espacio debe existir (aunque esté inactivo u oculto)
+  const espacio = await EspaciosRepository.findById(id);
 
-  const fechas = await prisma.reserva.findMany({
-    where: {
-      espacioId: id,
-      estado: {
-        in: [
-          ReservaEstado.PENDIENTE,
-          ReservaEstado.PENDIENTE_PAGO,
-          ReservaEstado.CONFIRMADA,
-        ],
-      },
-    },
-    select: { fechaInicio: true, fechaFin: true },
-    orderBy: { fechaInicio: "asc" },
-  });
+  if (!espacio) {
+    throw new Error("ESPACIO_NOT_FOUND");
+  }
 
-  return { id, fechas };
+  const fechas = await EspaciosRepository.findReservasActivasPorEspacio(id);
+
+  // ⚠️ Mantiene contrato actual del frontend
+  return {
+    id,
+    fechas,
+  };
 }

@@ -1,3 +1,7 @@
+// ============================================================
+// actualizar-estado.controller.ts — ENAP 2025 (PRODUCTION READY)
+// ============================================================
+
 import { Response } from "express";
 import type { AuthRequest } from "../../types/global";
 
@@ -7,27 +11,43 @@ import { actualizarEstadoSchema } from "../../validators/reservas";
 
 export const actualizarEstado = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
-      return res.status(403).json({ ok: false, error: "NO_AUTORIZADO_ADMIN" });
-    }
+    // 🔐 Auth + ADMIN garantizados por router
+    const admin = req.user!;
+    const reservaId = req.params.id;
 
     const payload = actualizarEstadoSchema.parse(req.body);
 
     const reserva = await ActualizarEstadoReservaService.ejecutar(
-      req.params.id,
-      payload.estado
+      reservaId,
+      payload.estado,
+      admin
     );
 
-    return res.json({ ok: true, data: reservaToDTO(reserva) });
+    return res.json({
+      ok: true,
+      data: reservaToDTO(reserva),
+    });
 
   } catch (error: any) {
-    console.error("❌ [actualizar estado reserva]:", error);
+    const message = error?.message ?? "ERROR_ACTUALIZAR_ESTADO";
 
-    const status = error.message === "NOT_FOUND" ? 404 : 400;
+    console.error("❌ [actualizar estado reserva]:", message);
 
-    return res.status(status).json({
+    const statusMap: Record<string, number> = {
+      NOT_FOUND: 404,
+      NO_AUTORIZADO_ADMIN: 403,
+      ESTADO_REQUERIDO: 400,
+      ESTADO_INVALIDO: 400,
+      TRANSICION_INVALIDA: 409,
+      RESERVA_FINALIZADA_NO_MODIFICABLE: 409,
+      RESERVA_CANCELADA_NO_MODIFICABLE: 409,
+      RESERVA_RECHAZADA_SOLO_PUEDE_IR_A_PENDIENTE: 409,
+      CONFIRMADA_SOLO_PUEDE_FINALIZARSE: 409,
+    };
+
+    return res.status(statusMap[message] ?? 500).json({
       ok: false,
-      error: error.message ?? "Error al actualizar estado",
+      error: message,
     });
   }
 };

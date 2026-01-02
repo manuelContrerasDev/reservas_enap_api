@@ -1,40 +1,64 @@
-// src/validators/reservas/responsable.schema.ts
 import { z } from "zod";
 
-export const validarResponsable = (data: any, ctx: z.RefinementCtx) => {
-  const usoReserva = data.usoReserva as
-    | "USO_PERSONAL"
-    | "CARGA_DIRECTA"
-    | "TERCEROS"
-    | undefined;
-
-  const socioPresente: boolean =
+/* ============================================================
+ * VALIDACIÓN BACKEND — RESPONSABLE
+ *
+ * Contexto:
+ * - Usado SOLO en edición de reserva
+ * - socioPresente es un flag transitorio (NO persistente)
+ *
+ * Reglas:
+ * 1. socioPresente = true
+ *    → NO puede existir responsable
+ *
+ * 2. socioPresente = false
+ *    → responsable COMPLETO es obligatorio
+ * ============================================================ */
+export const validarResponsable = (
+  data: {
+    socioPresente?: boolean;
+    nombreResponsable?: string | null;
+    rutResponsable?: string | null;
+    emailResponsable?: string | null;
+    telefonoResponsable?: string | null;
+  },
+  ctx: z.RefinementCtx
+) => {
+  const socioPresente =
     typeof data.socioPresente === "boolean" ? data.socioPresente : true;
 
-  // Regla 1: si usoReserva = TERCEROS → el socio NO puede estar presente
-  if (usoReserva === "TERCEROS" && socioPresente) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message:
-        "Si la reserva es para terceros, el socio no puede estar presente",
-      path: ["socioPresente"],
-    });
+  /* ================= SOCIO PRESENTE ================= */
+  if (socioPresente) {
+    const existeResponsable =
+      data.nombreResponsable ||
+      data.rutResponsable ||
+      data.emailResponsable ||
+      data.telefonoResponsable;
+
+    if (existeResponsable) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "No puede existir responsable si el socio está presente",
+        path: ["socioPresente"],
+      });
+    }
+
+    return;
   }
 
-  // Si el socio está presente → no exigimos responsable
-  if (socioPresente) return;
-
-  // Regla 2: si el socio NO está presente → responsable obligatorio
-  const missing =
+  /* ================= SOCIO NO PRESENTE ================= */
+  const faltanDatos =
     !data.nombreResponsable ||
     !data.rutResponsable ||
     !data.emailResponsable ||
     !data.telefonoResponsable;
 
-  if (missing) {
+  if (faltanDatos) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Debes completar los datos del responsable",
+      message:
+        "Debes completar todos los datos del responsable",
       path: ["nombreResponsable"],
     });
   }

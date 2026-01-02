@@ -32,12 +32,8 @@ export const validarRangoFechas = (data: any, ctx: z.RefinementCtx) => {
     return;
   }
 
-  // 🔹 Aquí ya NO validamos cantidad de días (3-6)
-  //     -> eso se resuelve en los services según tipo de espacio.
-
-  // 1 = lunes (getDay): 0 Domingo, 1 Lunes, ...
-  const diaInicio = inicio.getDay();
-  if (diaInicio === 1) {
+  // ⚠️ Regla de días mínimos/máximos se valida en services
+  if (inicio.getDay() === 1) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "La fecha de inicio no puede ser lunes (mantenimiento)",

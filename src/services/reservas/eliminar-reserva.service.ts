@@ -1,74 +1,73 @@
-// src/services/reservas/eliminar-reserva.service.ts
 // ============================================================
-// EliminarReservaService — ENAP 2025 (ADMIN ONLY, FINAL)
+// eliminar-reserva.service.ts — ENAP 2025 (ADMIN SOFT DELETE)
 // ============================================================
 
 import { prisma } from "../../lib/db";
 import { ReservaEstado, Role } from "@prisma/client";
-
-interface AuthUser {
-  id: string;
-  role: Role;
-}
+import type { AuthUser } from "../../types/global";
 
 export const EliminarReservaService = {
   async ejecutar(reservaId: string, admin: AuthUser) {
-    // --------------------------------------------------------
-    // 1) Validar rol administrador
-    // --------------------------------------------------------
-    if (!admin || admin.role !== "ADMIN") {
+    /* --------------------------------------------------------
+     * 0) Seguridad
+     * -------------------------------------------------------- */
+    if (!admin || admin.role !== Role.ADMIN) {
       throw new Error("NO_AUTORIZADO_ADMIN");
     }
 
-    // --------------------------------------------------------
-    // 2) Obtener reserva
-    // --------------------------------------------------------
+    /* --------------------------------------------------------
+     * 1) Obtener reserva
+     * -------------------------------------------------------- */
     const reserva = await prisma.reserva.findUnique({
       where: { id: reservaId },
       select: {
         id: true,
         estado: true,
-        fechaInicio: true,
       },
     });
 
-    if (!reserva) throw new Error("NOT_FOUND");
+    if (!reserva) {
+      throw new Error("NOT_FOUND");
+    }
 
-    // --------------------------------------------------------
-    // 3) Reglas contables ENAP 2025
-    //    FINALIZADA → No puede eliminarse
-    //    CADUCADA  → No eliminar (historial)
-    // --------------------------------------------------------
+    /* --------------------------------------------------------
+     * 2) Estados NO anulables
+     * -------------------------------------------------------- */
     const estadosBloqueados: ReservaEstado[] = [
+      ReservaEstado.CONFIRMADA,
       ReservaEstado.FINALIZADA,
       ReservaEstado.CADUCADA,
     ];
 
     if (estadosBloqueados.includes(reserva.estado)) {
-      throw new Error("NO_PERMITIDO");
+      throw new Error("RESERVA_NO_ELIMINABLE");
     }
 
-    // --------------------------------------------------------
-    // 4) Transacción de eliminación total
-    // --------------------------------------------------------
-    await prisma.$transaction([
-      prisma.invitado.deleteMany({ where: { reservaId } }),
-      prisma.pago.deleteMany({ where: { reservaId } }),
-      prisma.reserva.delete({ where: { id: reservaId } }),
-    ]);
+    /* --------------------------------------------------------
+     * 3) Anulación administrativa (soft delete)
+     * -------------------------------------------------------- */
+    await prisma.reserva.update({
+      where: { id: reservaId },
+      data: {
+        estado: ReservaEstado.CANCELADA,
+        cancelledAt: new Date(),
+        cancelledBy: "ADMIN",
+      },
+    });
 
-    // --------------------------------------------------------
-    // 5) AuditLog (no bloquea el flujo si falla)
-    // --------------------------------------------------------
+    /* --------------------------------------------------------
+     * 4) AuditLog (NO bloqueante)
+     * -------------------------------------------------------- */
     prisma.auditLog
       .create({
         data: {
-          action: "ADMIN_ELIMINAR_RESERVA",
+          action: "ADMIN_ANULAR_RESERVA",
           entity: "Reserva",
           entityId: reservaId,
           userId: admin.id,
           details: {
             estadoAnterior: reserva.estado,
+            nuevoEstado: ReservaEstado.CANCELADA,
           },
         },
       })

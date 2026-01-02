@@ -14,10 +14,14 @@ datasource db {
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
+  emailDomain  String?
+  emailLocked  Boolean  @default(false)
+
   passwordHash String
   name         String?
   rut          String?
-  role         Role     @default(SOCIO)
+  role         Role     @default(EXTERNO)
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -25,7 +29,6 @@ model User {
   emailConfirmToken   String?   @unique
   emailConfirmExpires DateTime?
 
-  // Relaciones
   resetTokens PasswordResetToken[]
 
   reservas Reserva[] @relation("ReservasPorUsuario")
@@ -34,7 +37,9 @@ model User {
   auditLogs AuditLog[]
 
   @@index([role])
+  @@index([emailDomain])
 }
+
 
 model PasswordResetToken {
   token     String    @id
@@ -55,29 +60,37 @@ model Espacio {
   id             String         @id @default(uuid())
   nombre         String
   tipo           TipoEspacio
-  capacidad      Int
   descripcion    String?
   imagenUrl      String?
+
+  capacidad      Int
+
+  // Estado y visibilidad
   activo         Boolean        @default(true)
+  visible        Boolean        @default(true)
+  orden          Int            @default(0)
+
   modalidadCobro ModalidadCobro @default(POR_NOCHE)
 
-  // --- TARIFAS BASE (Por Noche/Día) ---
+  // --- TARIFAS BASE (Por Noche / Día) ---
   precioBaseSocio   Int @default(0)
   precioBaseExterno Int @default(0)
 
-  // --- TARIFAS POR PERSONA (Access Fee) ---
-  precioPersonaSocio   Int @default(3500)
-  precioPersonaExterno Int @default(4500)
+  // --- TARIFAS POR PERSONA ADICIONAL ---
+  precioPersonaAdicionalSocio   Int @default(3500)
+  precioPersonaAdicionalExterno Int @default(4500)
 
   // --- TARIFAS PISCINA ---
   precioPiscinaSocio   Int @default(3500)
   precioPiscinaExterno Int @default(4500)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  reservas  Reserva[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservas Reserva[]
 
   @@index([tipo, activo])
+  @@index([visible])
 }
 
 // --------------------------------------
@@ -91,7 +104,7 @@ model Reserva {
 
   fechaInicio DateTime
   fechaFin    DateTime
-  dias        Int
+  dias        Int // snapshot calculado en backend
 
   expiresAt DateTime? // Regla 24h
 
@@ -105,22 +118,25 @@ model Reserva {
   correoEnap     String
   correoPersonal String?
 
-  nombreResponsable String?
-  rutResponsable    String?
-  emailResponsable  String?
+  nombreResponsable    String?
+  rutResponsable       String?
+  emailResponsable     String?
   telefonoResponsable  String?
 
-  // Cantidades para la calculadora
+  // Cantidades
   cantidadAdultos Int @default(1)
   cantidadNinos   Int @default(0)
   cantidadPiscina Int @default(0)
 
-  // Snapshots (Auditoría Financiera)
+  // Snapshots financieros
   precioBaseSnapshot    Int @default(0)
   precioPersonaSnapshot Int @default(0)
   precioPiscinaSnapshot Int @default(0)
+  totalClp              Int
 
-  totalClp Int
+  // Auditoría estado
+  cancelledAt DateTime?
+  cancelledBy String? // USER | ADMIN | SYSTEM
 
   terminosAceptados Boolean @default(false)
   terminosVersion   String?
@@ -128,20 +144,20 @@ model Reserva {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // RESERVAS MANUALES (ADMIN)
-  creadaPor      String?
-  adminCreador   User?     @relation("ReservasCreadasPorAdmin", fields: [creadaPor], references: [id])
-
+  // Admin
+  creadaPor    String?
+  adminCreador User? @relation("ReservasCreadasPorAdmin", fields: [creadaPor], references: [id])
 
   invitados Invitado[]
   pago      Pago?
   espacio   Espacio @relation(fields: [espacioId], references: [id])
-  user User @relation("ReservasPorUsuario", fields: [userId], references: [id])
+  user      User    @relation("ReservasPorUsuario", fields: [userId], references: [id])
 
   @@index([estado])
   @@index([fechaInicio, fechaFin])
+  @@index([espacioId, fechaInicio, fechaFin])
+  @@index([userId, createdAt])
 }
-
 
 model Invitado {
   id        String  @id @default(uuid())

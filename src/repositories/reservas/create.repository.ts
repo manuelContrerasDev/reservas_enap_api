@@ -1,46 +1,62 @@
+// ============================================================
 // src/repositories/reservas/create.repository.ts
+// ENAP 2025 — Production Ready
+// ============================================================
 
-import { prisma } from "../../lib/db";
 import { Prisma } from "@prisma/client";
 
 export const ReservasCreateRepository = {
 
   /* ============================================================
-   * 🟢 CREAR RESERVA (Optimizado para ENAP 2025)
+   * 🟢 CREAR RESERVA
+   * ------------------------------------------------------------
+   * CONTRATO:
+   * - Se ejecuta DENTRO de una transacción
+   * - Datos YA validados por el service
+   * - Usa UncheckedCreateInput por performance
    * ============================================================ */
-  async crearReserva(data: Prisma.ReservaUncheckedCreateInput) {
+  async crearReserva(
+    tx: Prisma.TransactionClient,
+    data: Prisma.ReservaUncheckedCreateInput
+  ) {
     try {
-      const reserva = await prisma.reserva.create({ data });
-      return reserva;
-
+      return await tx.reserva.create({ data });
     } catch (error) {
-      console.error("❌ [Repo] Error al crear reserva:", error);
+      console.error("❌ [ReservasCreateRepository.crearReserva]", error);
       throw new Error("ERROR_CREAR_RESERVA");
     }
   },
 
   /* ============================================================
    * 👥 CREAR INVITADOS
+   * ------------------------------------------------------------
+   * - No retorna datos (fire & forget dentro de TX)
+   * - Si no hay invitados, no hace nada
    * ============================================================ */
   async crearInvitados(
+    tx: Prisma.TransactionClient,
     reservaId: string,
-    invitados: Array<{ nombre: string; rut: string; edad?: number | null }>
-  ) {
+    invitados: Array<{
+      nombre: string;
+      rut: string;
+      edad?: number | null;
+      esPiscina?: boolean;
+    }>
+  ): Promise<void> {
     if (!invitados.length) return;
 
     try {
-      await prisma.invitado.createMany({
-        data: invitados.map((i) => ({
+      await tx.invitado.createMany({
+        data: invitados.map(i => ({
           reservaId,
           nombre: i.nombre.trim(),
           rut: i.rut.trim(),
           edad: i.edad ?? null,
-          // esPiscina queda como default(false)
+          esPiscina: i.esPiscina ?? false,
         })),
       });
-
     } catch (error) {
-      console.error("❌ [Repo] Error al crear invitados:", error);
+      console.error("❌ [ReservasCreateRepository.crearInvitados]", error);
       throw new Error("ERROR_CREAR_INVITADOS");
     }
   },

@@ -3,7 +3,6 @@ import { TipoEspacio } from "@prisma/client";
 
 export const catalogoQuerySchema = z.object({
   search: z.string().trim().optional(),
-
   tipo: z.nativeEnum(TipoEspacio).optional(),
 
   capacidadMin: z

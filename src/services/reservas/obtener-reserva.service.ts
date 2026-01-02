@@ -1,47 +1,38 @@
 // ============================================================
-// obtener.service.ts — ENAP 2025 (FINAL + SECURITY FIX)
+// obtener-reserva.service.ts — ENAP 2025 (FINAL)
 // ============================================================
 
 import { ReservasReadRepository } from "../../repositories/reservas";
 import type { AuthUser } from "../../types/global";
 
 export const ObtenerReservaService = {
-  async ejecutar(id: string, user?: AuthUser) {
-    // ---------------------------------------------------------
-    // 0) Auth
-    // ---------------------------------------------------------
+  async ejecutar(reservaId: string, user: AuthUser) {
+    /* --------------------------------------------------------
+     * 0) Defensa básica
+     * -------------------------------------------------------- */
     if (!user) {
       throw new Error("NO_AUTH");
     }
 
-    // ---------------------------------------------------------
-    // 1) Validar ID
-    // ---------------------------------------------------------
-    if (!id || typeof id !== "string") {
-      throw new Error("ID_REQUERIDO");
-    }
-
-    const reservaId = id.trim();
-
-    // ---------------------------------------------------------
-    // 2) Obtener detalle (repo)
-    // ---------------------------------------------------------
+    /* --------------------------------------------------------
+     * 1) Obtener reserva
+     * -------------------------------------------------------- */
     const reserva = await ReservasReadRepository.detalle(reservaId);
 
     if (!reserva) {
-      throw new Error("RESERVA_NO_ENCONTRADA");
+      throw new Error("NOT_FOUND");
     }
 
-    // ---------------------------------------------------------
-    // 3) Seguridad por rol
-    // ---------------------------------------------------------
+    /* --------------------------------------------------------
+     * 2) Autorización
+     * -------------------------------------------------------- */
     if (user.role !== "ADMIN" && reserva.userId !== user.id) {
       throw new Error("FORBIDDEN");
     }
 
-    // ---------------------------------------------------------
-    // 4) Retornar
-    // ---------------------------------------------------------
+    /* --------------------------------------------------------
+     * 3) Retornar reserva (lectura pura)
+     * -------------------------------------------------------- */
     return reserva;
   },
 };

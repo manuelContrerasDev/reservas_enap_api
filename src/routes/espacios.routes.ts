@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { EspaciosController } from "../controllers/espacios/espacios.controller";
+import { EspaciosController } from "../controllers/espacios";
 
 import { authGuard } from "../middlewares/authGuard";
 import { roleGuard } from "../middlewares/roleGuard";

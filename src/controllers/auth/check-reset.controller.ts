@@ -1,64 +1,25 @@
 import { Request, Response } from "express";
-import { prisma } from "../../lib/db";
+import { ZodError } from "zod";
+import { checkResetSchema } from "../../validators/auth.schema";
+import { checkResetService } from "../../services/auth/auth.service";
 
 export const checkReset = async (req: Request, res: Response) => {
   try {
-    let token = req.query.token as string | undefined;
+    const { token } = checkResetSchema.parse(req.query);
 
-    // Validación básica
-    if (!token || typeof token !== "string" || token.trim().length === 0) {
+    await checkResetService(token);
+
+    return res.json({ ok: true, message: "Token válido" });
+
+  } catch (error: any) {
+    if (error instanceof ZodError || error.message === "INVALID_OR_EXPIRED_TOKEN") {
       return res.status(400).json({
         ok: false,
-        code: "INVALID",
-        message: "Token requerido",
+        message: "Token inválido o expirado",
       });
     }
 
-    token = token.trim();
-
-    // Buscar token en BD
-    const tokenRecord = await prisma.passwordResetToken.findUnique({
-      where: { token },
-    });
-
-    if (!tokenRecord) {
-      return res.status(400).json({
-        ok: false,
-        code: "INVALID",
-        message: "Token inválido",
-      });
-    }
-
-    // Expirado
-    if (tokenRecord.expiresAt < new Date()) {
-      return res.status(400).json({
-        ok: false,
-        code: "EXPIRED",
-        message: "Token expirado",
-      });
-    }
-
-    // Ya utilizado
-    if (tokenRecord.usedAt) {
-      return res.status(400).json({
-        ok: false,
-        code: "USED",
-        message: "Token ya utilizado",
-      });
-    }
-
-    // Todo OK
-    return res.json({
-      ok: true,
-      code: "VALID",
-      message: "Token válido",
-    });
-
-  } catch (error) {
-    console.error("❌ [AUTH check-reset]:", error);
-    return res.status(500).json({
-      ok: false,
-      message: "Error interno del servidor",
-    });
+    console.error("❌ [AUTH checkReset]:", error);
+    return res.status(500).json({ ok: false, message: "Error interno" });
   }
 };

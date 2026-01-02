@@ -1,77 +1,38 @@
 import { Request, Response } from "express";
-import { prisma } from "../../lib/db";
-import bcrypt from "bcryptjs";
 import { ZodError } from "zod";
 import { loginSchema } from "../../validators/auth.schema";
-import { TokenService } from "../../services/TokenService";
+import { loginService } from "../../services/auth/auth.service";
 
 export const login = async (req: Request, res: Response) => {
   try {
     const data = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({
-      where: { email: data.email },
-    });
+    const result = await loginService(data);
 
-    if (!user) {
-      return res.status(400).json({
-        ok: false,
-        code: "USER_NOT_FOUND",
-        message: "Correo no registrado",
-      });
+    // ❌ LOGIN FALLIDO (controlado)
+    if (!result.ok) {
+      return res.status(
+        result.code === "EMAIL_NOT_CONFIRMED" ? 403 : 401
+      ).json(result);
     }
 
-    if (!user.emailConfirmed) {
-      return res.status(403).json({
-        ok: false,
-        code: "EMAIL_NOT_CONFIRMED",
-        message: "Tu correo aún no está confirmado.",
-      });
-    }
-
-    const validPassword = await bcrypt.compare(
-      data.password,
-      user.passwordHash
-    );
-
-    if (!validPassword) {
-      return res.status(400).json({
-        ok: false,
-        code: "INVALID_PASSWORD",
-        message: "Contraseña incorrecta",
-      });
-    }
-
-    const token = TokenService.sign({
-      sub: user.id,
-      role: user.role,
-      email: user.email,
-      name: user.name,
-    });
-
-    return res.json({
-      ok: true,
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        name: user.name,
-      },
-    });
+    // ✅ LOGIN OK
+    return res.json(result);
 
   } catch (error) {
-    if (error instanceof ZodError)
+    if (error instanceof ZodError) {
       return res.status(400).json({
         ok: false,
+        code: "INVALID_DATA",
         message: "Datos inválidos",
         issues: error.issues,
       });
+    }
 
     console.error("❌ [AUTH login]:", error);
-
     return res.status(500).json({
       ok: false,
+      code: "INTERNAL_ERROR",
       message: "Error interno del servidor",
     });
   }

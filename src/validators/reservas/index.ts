@@ -18,8 +18,7 @@ export * from "./actualizar-estado-reserva.schema";
 // -------
 // ADMINISTRACIÓN / LISTADOS
 
-export * from "./filtros-admin.schema";
-export * from "./mias.schema"; // Reservas del propio usuario (futuro expandible)
+export * from "./obtener-admin.schema";
 export * from "./reservaManual.schema";
 
 // -------

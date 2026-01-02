@@ -1,50 +1,36 @@
 // ============================================================
-// admin-list.service.ts — ENAP 2025 (VERSIÓN OFICIAL SINCRONIZADA)
+// admin-list.service.ts — ENAP 2025 (PRODUCTION READY)
 // ============================================================
 
 import { ReservaEstado, Prisma } from "@prisma/client";
 import { ReservasAdminRepository } from "../../repositories/reservas";
+import type { AdminReservasQuery } from "../../validators/reservas";
 
 export const ReservasAdminListService = {
-  async ejecutar(query: any) {
-    /* --------------------------------------------------------
-     * 1) NORMALIZAR QUERY PARAMS
-     * -------------------------------------------------------- */
-    let {
-      estado,
-      espacioId,
-      socio, // búsqueda libre: nombre / rut / email / responsable / teléfono
-      fechaInicio,
-      fechaFin,
-      page = "1",
-      limit = "20",
-      sort = "fechaInicio",
-      order = "desc",
-    } = query;
+  async ejecutar(query: AdminReservasQuery) {
 
-    const pageNum = Math.max(1, Number(page));
-    const limitNum = Math.max(1, Number(limit));
+    /* --------------------------------------------------------
+     * 1) NORMALIZAR PAGINACIÓN
+     * -------------------------------------------------------- */
+    const pageNum = Math.max(1, Number(query.page) || 1);
+    const limitNum = Math.max(1, Number(query.limit) || 20);
     const skip = (pageNum - 1) * limitNum;
 
     /* --------------------------------------------------------
-     * 2) CONSTRUIR FILTROS (WhereInput)
+     * 2) CONSTRUIR FILTROS
      * -------------------------------------------------------- */
     const filtros: Prisma.ReservaWhereInput = {};
 
-    // Estado
-    if (estado && estado !== "TODOS") {
-      if (!Object.values(ReservaEstado).includes(estado as ReservaEstado)) {
-        throw new Error("ESTADO_INVALIDO");
-      }
-      filtros.estado = estado as ReservaEstado;
+    if (query.estado && query.estado !== "TODOS") {
+      filtros.estado = query.estado;
     }
 
-    // Espacio
-    if (espacioId) filtros.espacioId = String(espacioId);
+    if (query.espacioId) {
+      filtros.espacioId = query.espacioId;
+    }
 
-    // Búsqueda libre por socio / responsable / email / teléfono
-    if (socio) {
-      const term = String(socio).trim();
+    if (query.socio) {
+      const term = query.socio.trim();
 
       filtros.OR = [
         { nombreSocio: { contains: term, mode: "insensitive" } },
@@ -53,38 +39,35 @@ export const ReservasAdminListService = {
         { correoEnap: { contains: term, mode: "insensitive" } },
         { correoPersonal: { contains: term, mode: "insensitive" } },
 
-        // responsable
         { nombreResponsable: { contains: term, mode: "insensitive" } },
         { rutResponsable: { contains: term, mode: "insensitive" } },
         { telefonoResponsable: { contains: term, mode: "insensitive" } },
         { emailResponsable: { contains: term, mode: "insensitive" } },
 
-        // usuario propietario
         { user: { email: { contains: term, mode: "insensitive" } } },
       ];
     }
 
-    // Filtro por fechas
-    if (fechaInicio || fechaFin) {
+    if (query.fechaInicio || query.fechaFin) {
       filtros.fechaInicio = {};
-      if (fechaInicio) filtros.fechaInicio.gte = new Date(fechaInicio);
-      if (fechaFin) filtros.fechaInicio.lte = new Date(fechaFin);
+
+      if (query.fechaInicio) {
+        filtros.fechaInicio.gte = new Date(query.fechaInicio);
+      }
+
+      if (query.fechaFin) {
+        filtros.fechaInicio.lte = new Date(query.fechaFin);
+      }
     }
 
     /* --------------------------------------------------------
      * 3) ORDENAMIENTO
      * -------------------------------------------------------- */
-    const validSorts = [
-      "fechaInicio",
-      "fechaFin",
-      "estado",
-      "totalClp",
-      "nombreSocio",
-    ];
+    const sort = query.sort ?? "fechaInicio";
 
-    if (!validSorts.includes(sort)) sort = "fechaInicio";
-
-    const orderBy = { [sort]: order === "asc" ? "asc" : "desc" };
+    const orderBy: Prisma.ReservaOrderByWithRelationInput = {
+      [sort]: query.order === "asc" ? "asc" : "desc",
+    };
 
     /* --------------------------------------------------------
      * 4) CONSULTAS
@@ -106,7 +89,7 @@ export const ReservasAdminListService = {
         total,
         page: pageNum,
         limit: limitNum,
-        pages: Math.ceil(total / limitNum) || 1,
+        pages: Math.max(1, Math.ceil(total / limitNum)),
       },
       data: reservas,
     };

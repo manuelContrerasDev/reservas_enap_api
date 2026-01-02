@@ -10,12 +10,12 @@ export const desactivar = async (req: Request, res: Response) => {
 
     return res.json({
       ok: true,
-      message: "Espacio deshabilitado correctamente",
+      message: "Espacio desactivado correctamente",
       data: espacio,
     });
   } catch (error: any) {
-    if (error.name === "ZodError") {
-      return res.status(400).json({ ok: false, error: "ID inválido" });
+    if (error?.name === "ZodError") {
+      return res.status(400).json({ ok: false, error: "ID inválido", issues: error.issues });
     }
 
     if (error?.message === "ESPACIO_NOT_FOUND") {
@@ -23,6 +23,6 @@ export const desactivar = async (req: Request, res: Response) => {
     }
 
     console.error("❌ [desactivar] Error:", error);
-    return res.status(500).json({ ok: false, error: "Error al deshabilitar espacio" });
+    return res.status(500).json({ ok: false, error: "Error al desactivar espacio" });
   }
 };

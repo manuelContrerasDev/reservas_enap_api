@@ -1,20 +1,24 @@
 // ============================================================
 // src/repositories/reservas/read.repository.ts
-// ENAP 2025 — Versión Oficial
+// ENAP 2025 — PRODUCTION READY
 // ============================================================
 
 import { prisma } from "../../lib/db";
-import { Prisma, ReservaEstado } from "@prisma/client";
+import { ReservaEstado } from "@prisma/client";
 
 export const ReservasReadRepository = {
 
   /* ============================================================
-   * 👤 MIS RESERVAS (Socio / Externo autorizado)
+   * 👤 MIS RESERVAS (Usuario autenticado)
    * ============================================================ */
   misReservas(userId: string) {
     return prisma.reserva.findMany({
       where: { userId },
-      orderBy: { fechaInicio: "desc" },
+
+      orderBy: {
+        fechaInicio: "desc",
+      },
+
       include: {
         espacio: {
           select: {
@@ -25,6 +29,7 @@ export const ReservasReadRepository = {
             imagenUrl: true,
           },
         },
+
         invitados: {
           select: {
             id: true,
@@ -33,20 +38,26 @@ export const ReservasReadRepository = {
             edad: true,
           },
         },
-        pago: true,
-        user: {
-          select: { id: true, name: true, email: true },
+
+        pago: {
+          select: {
+            id: true,
+            status: true,
+            amountClp: true,
+            transactionDate: true,
+          },
         },
       },
     });
   },
 
   /* ============================================================
-   * 📄 DETALLE RESERVA (FULL)
+   * 📄 DETALLE RESERVA (full lectura)
    * ============================================================ */
   detalle(id: string) {
     return prisma.reserva.findUnique({
       where: { id },
+
       include: {
         espacio: {
           select: {
@@ -57,17 +68,16 @@ export const ReservasReadRepository = {
             capacidad: true,
             imagenUrl: true,
 
-            // 🔥 Nuevas tarifas ENAP 2025
+            // ✔ NOMBRES REALES DEL MODELO PRISMA
             precioBaseSocio: true,
             precioBaseExterno: true,
-            precioPersonaSocio: true,
-            precioPersonaExterno: true,
+            precioPersonaAdicionalSocio: true,
+            precioPersonaAdicionalExterno: true,
             precioPiscinaSocio: true,
             precioPiscinaExterno: true,
           },
         },
 
-        // Invitados asociados
         invitados: {
           select: {
             id: true,
@@ -78,41 +88,6 @@ export const ReservasReadRepository = {
         },
 
         pago: true,
-        user: true,
-      },
-    });
-  },
-
-  /* ============================================================
-   * 🛠 ADMIN — COUNT
-   * ============================================================ */
-  adminCount(filtros: Prisma.ReservaWhereInput) {
-    return prisma.reserva.count({ where: filtros });
-  },
-
-  /* ============================================================
-   * 🛠 ADMIN — LISTADO COMPLETO
-   * ============================================================ */
-  adminList(
-    filtros: Prisma.ReservaWhereInput,
-    skip: number,
-    take: number,
-    orderBy: any
-  ) {
-    return prisma.reserva.findMany({
-      where: filtros,
-      skip,
-      take,
-      orderBy,
-      include: {
-        espacio: {
-          select: {
-            id: true,
-            nombre: true,
-            tipo: true,
-            capacidad: true,
-          },
-        },
         user: {
           select: {
             id: true,
@@ -120,33 +95,33 @@ export const ReservasReadRepository = {
             email: true,
           },
         },
-        invitados: {
-          select: {
-            id: true,
-            nombre: true,
-            rut: true,
-            edad: true,
-          },
-        },
-        pago: true,
       },
     });
   },
 
   /* ============================================================
-   * 🟦 DISPONIBILIDAD PISCINA — Día completo
+   * 🟦 DISPONIBILIDAD PISCINA — Día completo (FIX TIMEZONE)
    * ============================================================ */
-  piscinaPorFecha(fechaInicio: Date) {
+  piscinaPorFecha(fecha: Date) {
+    const inicioDia = new Date(fecha);
+    inicioDia.setHours(0, 0, 0, 0);
+
+    const finDia = new Date(fecha);
+    finDia.setHours(23, 59, 59, 999);
+
     return prisma.reserva.findMany({
       where: {
         espacio: { tipo: "PISCINA" },
-        fechaInicio,
         estado: { not: ReservaEstado.CANCELADA },
+        fechaInicio: {
+          gte: inicioDia,
+          lte: finDia,
+        },
       },
+
       select: {
-        cantidadPiscina: true, // model update
+        cantidadPiscina: true,
       },
     });
   },
-
 };

@@ -1,20 +1,36 @@
 import { Request, Response } from "express";
 import { EspaciosService } from "../../services/espacios";
-
 import {
   actualizarEspacioSchema,
   espacioIdSchema,
 } from "../../validators/espacios";
 
 export const actualizar = async (req: Request, res: Response) => {
+  // 🔐 ADMIN only (validar en middleware de rutas)
+
+  const paramsParsed = espacioIdSchema.safeParse(req.params);
+  if (!paramsParsed.success) {
+    return res.status(400).json({
+      ok: false,
+      error: "ID inválido",
+      issues: paramsParsed.error.issues,
+    });
+  }
+
+  const bodyParsed = actualizarEspacioSchema.safeParse(req.body);
+  if (!bodyParsed.success) {
+    return res.status(400).json({
+      ok: false,
+      error: "Datos inválidos",
+      issues: bodyParsed.error.issues,
+    });
+  }
+
   try {
-    // Validate params
-    const { id } = espacioIdSchema.parse(req.params);
-
-    // Validate body
-    const body = actualizarEspacioSchema.parse(req.body);
-
-    const espacio = await EspaciosService.actualizar(id, body);
+    const espacio = await EspaciosService.actualizar(
+      paramsParsed.data.id,
+      bodyParsed.data
+    );
 
     return res.json({
       ok: true,
@@ -22,15 +38,22 @@ export const actualizar = async (req: Request, res: Response) => {
       data: espacio,
     });
   } catch (error: any) {
-    if (error.name === "ZodError") {
-      return res.status(400).json({ ok: false, error: "Datos inválidos", issues: error.issues });
-    }
-
     if (error?.message === "ESPACIO_NOT_FOUND") {
-      return res.status(404).json({ ok: false, error: "Espacio no encontrado" });
+      return res.status(404).json({
+        ok: false,
+        error: "Espacio no encontrado",
+      });
     }
 
-    console.error("❌ [actualizar] Error:", error);
-    return res.status(500).json({ ok: false, error: "Error al actualizar espacio" });
+    console.error("❌ [ESPACIOS][ACTUALIZAR]", {
+      error,
+      userId: (req as any)?.user?.id,
+      ip: req.ip,
+    });
+
+    return res.status(500).json({
+      ok: false,
+      error: "Error al actualizar espacio",
+    });
   }
 };

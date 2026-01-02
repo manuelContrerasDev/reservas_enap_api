@@ -1,4 +1,3 @@
-// src/controllers/reservas/mias.controller.ts
 import { Response } from "express";
 import type { AuthRequest } from "../../types/global";
 
@@ -7,9 +6,7 @@ import { reservaToDTO } from "./utils/reservaToDTO";
 
 export const misReservas = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ ok: false, error: "NO_AUTH" });
-    }
+    if (!req.user) throw new Error("NO_AUTH");
 
     const reservas = await ReservasMiasService.ejecutar(req.user);
 
@@ -19,11 +16,14 @@ export const misReservas = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error("❌ [mias reservas]:", error);
+    const message = error?.message ?? "ERROR_MIS_RESERVAS";
 
-    return res.status(400).json({
+    console.error("❌ [mis reservas]:", message);
+
+    return res.status(message === "NO_AUTH" ? 401 : 500).json({
       ok: false,
-      error: error.message ?? "Error al obtener reservas",
+      error: message,
     });
   }
 };
+

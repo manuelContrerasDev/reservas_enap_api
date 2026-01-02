@@ -1,4 +1,7 @@
-// src/controllers/reservas/admin-list.controller.ts
+// ============================================================
+// admin-list.controller.ts — ENAP 2025 (FINAL)
+// ============================================================
+
 import { Response } from "express";
 import type { AuthRequest } from "../../../types/global";
 
@@ -6,15 +9,14 @@ import { ReservasAdminListService } from "../../../services/reservas";
 import { reservaToDTO } from "../../reservas/utils/reservaToDTO";
 import { adminReservasQuerySchema } from "../../../validators/reservas";
 
+/**
+ * GET /api/reservas
+ * Uso exclusivo ADMIN
+ * Listado paginado con filtros avanzados
+ */
 export const obtenerReservasAdmin = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
-      return res.status(403).json({
-        ok: false,
-        error: "NO_AUTORIZADO_ADMIN",
-      });
-    }
-
+    // 🔐 Auth + rol ADMIN garantizados por router
     const query = adminReservasQuerySchema.parse(req.query);
 
     const result = await ReservasAdminListService.ejecutar(query);
@@ -26,11 +28,18 @@ export const obtenerReservasAdmin = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error("❌ [admin reservas]:", error);
+    const message = error?.message ?? "Error al obtener reservas";
 
-    return res.status(500).json({
+    console.error("❌ [admin reservas]:", message);
+
+    const status =
+      message === "ESTADO_INVALIDO" ? 400 :
+      message === "FECHA_INVALIDA" ? 400 :
+      500;
+
+    return res.status(status).json({
       ok: false,
-      error: error.message ?? "Error al obtener reservas",
+      error: message,
     });
   }
 };

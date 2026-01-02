@@ -1,42 +1,6 @@
 // ============================================================
 // calcularReserva.ts — Motor Oficial ENAP 2025 (Producción)
 // ============================================================
-//
-// Reglas clave:
-// ------------------------------------------------------------
-// SOCIO paga precio SOCIO cuando:
-//  - usoReserva = USO_PERSONAL
-//  - usoReserva = CARGA_DIRECTA
-//
-// SOCIO paga precio EXTERNO cuando:
-//  - usoReserva = TERCEROS
-//
-// EXTERNO paga siempre precio EXTERNO (role = EXTERNO)
-//
-// Modalidades:
-//  - POR_NOCHE   → base * días
-//  - POR_DIA     → base * días
-//  - POR_PERSONA → solo tarifas por persona (base = 0)
-//
-// Piscina:
-//  - CABANA/QUINCHO con acceso a piscina:
-//      • SOCIO → primeras 5 personas piscina gratis por reserva
-//      • EXTERNO → todas pagadas
-//      • Se cobra una sola vez (no por día).
-//
-//  - PISCINA como espacio principal (tipo = PISCINA + POR_PERSONA):
-//      • NO aplica beneficio de 5 gratis
-//      • Se cobra cantidadPiscina * precioPiscina * días
-//
-// Niños:
-//  - Los >= 12 años ya deben venir contados en cantidadAdultos
-//    (regla aplicada en el servicio que arma estos parámetros)
-//
-// Compatible con:
-//  - SOCIO no registrado (role = null)
-//  - EXTERNO registrado
-//  - Reservas manuales y automáticas
-// ============================================================
 
 import { ModalidadCobro, TipoEspacio, UsoReserva, Role } from "@prisma/client";
 
@@ -48,8 +12,8 @@ export interface CalculoReservaParams {
     precioBaseSocio: number;
     precioBaseExterno: number;
 
-    precioPersonaSocio: number;
-    precioPersonaExterno: number;
+    precioPersonaAdicionalSocio: number;
+    precioPersonaAdicionalExterno: number;
 
     precioPiscinaSocio: number;
     precioPiscinaExterno: number;
@@ -62,7 +26,7 @@ export interface CalculoReservaParams {
   cantidadPiscina: number;
 
   usoReserva: UsoReserva;
-  role?: Role | null; // null → SOCIO no registrado
+  role?: Role | null; // null = socio no registrado
 }
 
 export function calcularReserva(params: CalculoReservaParams) {
@@ -76,102 +40,101 @@ export function calcularReserva(params: CalculoReservaParams) {
     role,
   } = params;
 
+  // ============================================================
+  // Normalizaciones básicas
+  // ============================================================
+
   const diasEfectivos = Math.max(dias, 1);
+  const totalPersonas = cantidadAdultos + cantidadNinos;
 
   // ============================================================
-  // 1. Determinar si paga como SOCIO o EXTERNO
+  // 1. Determinar tipo de tarifa
   // ============================================================
 
-  const esExternoReal = role === "EXTERNO";
+  const esExternoReal = role === Role.EXTERNO;
 
-  // SOCIO paga tarifa SOCIO excepto cuando usoReserva = TERCEROS
-  const pagoComoSocio =
+  const pagaComoSocio =
     !esExternoReal &&
-    (usoReserva === "USO_PERSONAL" || usoReserva === "CARGA_DIRECTA");
+    (usoReserva === UsoReserva.USO_PERSONAL ||
+      usoReserva === UsoReserva.CARGA_DIRECTA);
 
-  // EXTERNO real O TERCEROS → tarifa EXTERNO
-  const pagoComoExterno = esExternoReal || usoReserva === "TERCEROS";
+  const pagaComoExterno =
+    esExternoReal || usoReserva === UsoReserva.TERCEROS;
 
-  if (pagoComoSocio && pagoComoExterno) {
-    throw new Error("Regla inconsistente: socio y externo simultáneo.");
+  if (pagaComoSocio && pagaComoExterno) {
+    throw new Error("Regla inválida: conflicto SOCIO / EXTERNO");
   }
 
-  const precioBase = pagoComoSocio
+  // ============================================================
+  // 2. Selección de tarifas
+  // ============================================================
+
+  const precioBase = pagaComoSocio
     ? espacio.precioBaseSocio
     : espacio.precioBaseExterno;
 
-  const precioPersona = pagoComoSocio
-    ? espacio.precioPersonaSocio
-    : espacio.precioPersonaExterno;
+  const precioPersona = pagaComoSocio
+    ? espacio.precioPersonaAdicionalSocio
+    : espacio.precioPersonaAdicionalExterno;
 
-  const precioPiscina = pagoComoSocio
+  const precioPiscina = pagaComoSocio
     ? espacio.precioPiscinaSocio
     : espacio.precioPiscinaExterno;
 
   // ============================================================
-  // 2. BASE según modalidad de cobro
+  // 3. Precio base (según modalidad)
   // ============================================================
 
   let precioBaseSnapshot = 0;
 
   if (
-    espacio.modalidadCobro === ModalidadCobro.POR_NOCHE ||
-    espacio.modalidadCobro === ModalidadCobro.POR_DIA
+    espacio.modalidadCobro === ModalidadCobro.POR_DIA ||
+    espacio.modalidadCobro === ModalidadCobro.POR_NOCHE
   ) {
-    // CABANA / QUINCHO → base por día/noche * días
     precioBaseSnapshot = precioBase * diasEfectivos;
   }
 
-  if (espacio.modalidadCobro === ModalidadCobro.POR_PERSONA) {
-    // Ej: PISCINA como espacio principal → sin base fija
-    precioBaseSnapshot = 0;
-  }
+  // POR_PERSONA → no hay base fija
 
   // ============================================================
-  // 3. TARIFA POR PERSONA (adultos + niños < 12)
+  // 4. Precio por personas (TODAS pagan)
   // ============================================================
 
-  const totalPersonas = cantidadAdultos + cantidadNinos;
   const precioPersonaSnapshot = totalPersonas * precioPersona;
 
   // ============================================================
-  // 4. PISCINA
+  // 5. Piscina
   // ============================================================
 
   let precioPiscinaSnapshot = 0;
 
   if (cantidadPiscina > 0) {
-    let cantidadPagadasPiscina = cantidadPiscina;
-
     const esPiscinaPrincipal =
       espacio.tipo === TipoEspacio.PISCINA &&
       espacio.modalidadCobro === ModalidadCobro.POR_PERSONA;
 
-    if (!esPiscinaPrincipal) {
-      // Piscina como extra de CABANA/QUINCHO:
-      // SOCIO tiene 5 gratis por reserva
-      cantidadPagadasPiscina = pagoComoSocio
-        ? Math.max(cantidadPiscina - 5, 0)
+    if (esPiscinaPrincipal) {
+      // Piscina como espacio principal → por persona * día
+      precioPiscinaSnapshot =
+        cantidadPiscina * precioPiscina * diasEfectivos;
+    } else {
+      // Piscina como extra de CABANA / QUINCHO
+      const personasPagadas = pagaComoSocio
+        ? Math.max(cantidadPiscina - 5, 0) // 5 gratis socio
         : cantidadPiscina;
 
-      // Se cobra una sola vez por reserva (no por día)
-      precioPiscinaSnapshot = cantidadPagadasPiscina * precioPiscina;
-    } else {
-      // Piscina como espacio principal:
-      // NO hay 5 gratis → se paga desde la primera persona
-      // y es por día * persona
-      cantidadPagadasPiscina = cantidadPiscina;
-      precioPiscinaSnapshot =
-        cantidadPagadasPiscina * precioPiscina * diasEfectivos;
+      precioPiscinaSnapshot = personasPagadas * precioPiscina;
     }
   }
 
   // ============================================================
-  // 5. TOTAL FINAL
+  // 6. Total final
   // ============================================================
 
   const totalClp =
-    precioBaseSnapshot + precioPersonaSnapshot + precioPiscinaSnapshot;
+    precioBaseSnapshot +
+    precioPersonaSnapshot +
+    precioPiscinaSnapshot;
 
   return {
     totalClp,

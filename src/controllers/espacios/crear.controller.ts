@@ -3,22 +3,35 @@ import { EspaciosService } from "../../services/espacios";
 import { crearEspacioSchema } from "../../validators/espacios";
 
 export const crear = async (req: Request, res: Response) => {
-  try {
-    const body = crearEspacioSchema.parse(req.body);
+  // 🔐 NOTA: este endpoint debe ser ADMIN only (ver routes / middleware)
+  const parsed = crearEspacioSchema.safeParse(req.body);
 
-    const espacio = await EspaciosService.crear(body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      ok: false,
+      error: "Datos inválidos",
+      issues: parsed.error.issues,
+    });
+  }
+
+  try {
+    const espacio = await EspaciosService.crear(parsed.data);
 
     return res.status(201).json({
       ok: true,
       message: "Espacio creado correctamente",
       data: espacio,
     });
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return res.status(400).json({ ok: false, error: "Datos inválidos", issues: error.issues });
-    }
+  } catch (error) {
+    console.error("❌ [ESPACIOS][CREAR]", {
+      error,
+      userId: (req as any)?.user?.id,
+      ip: req.ip,
+    });
 
-    console.error("❌ [crear] Error:", error);
-    return res.status(500).json({ ok: false, error: "Error al crear espacio" });
+    return res.status(500).json({
+      ok: false,
+      error: "Error al crear espacio",
+    });
   }
 };

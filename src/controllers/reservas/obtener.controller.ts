@@ -1,3 +1,4 @@
+// src/controllers/reservas/obtener.controller.ts
 import { Response } from "express";
 import type { AuthRequest } from "../../types/global";
 
@@ -13,10 +14,9 @@ export const obtener = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const reserva = await ObtenerReservaService.ejecutar(
-      req.params.id,
-      req.user
-    );
+    const reservaId = req.params.id;
+
+    const reserva = await ObtenerReservaService.ejecutar(reservaId, req.user);
 
     return res.json({
       ok: true,
@@ -24,17 +24,17 @@ export const obtener = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error("❌ [obtener reserva]:", error);
+    const message = error?.message ?? "ERROR_OBTENER_RESERVA";
 
-    const message = error.message ?? "Error al obtener reserva";
+    console.error("❌ [obtener reserva]:", message);
 
-    const status =
-      message === "NO_AUTH" ? 401 :
-      message === "NOT_FOUND" ? 404 :
-      message === "FORBIDDEN" ? 403 :
-      500;
+    const statusMap: Record<string, number> = {
+      NOT_FOUND: 404,
+      FORBIDDEN: 403,
+      NO_AUTH: 401,
+    };
 
-    return res.status(status).json({
+    return res.status(statusMap[message] ?? 500).json({
       ok: false,
       error: message,
     });

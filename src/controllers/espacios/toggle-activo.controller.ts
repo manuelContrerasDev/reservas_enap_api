@@ -1,20 +1,17 @@
 import { Request, Response } from "express";
 import { EspaciosService } from "../../services/espacios";
-import { toggleEspacioSchema } from "../../validators/espacios";
+import { espacioIdSchema } from "../../validators/espacios";
 
 export const toggleActivo = async (req: Request, res: Response) => {
   try {
-    const { id } = toggleEspacioSchema.parse(req.params);
+    const { id } = espacioIdSchema.parse(req.params);
 
     const espacio = await EspaciosService.toggleActivo(id);
 
-    return res.json({
-      ok: true,
-      data: espacio,
-    });
+    return res.json({ ok: true, data: espacio });
   } catch (error: any) {
-    if (error.name === "ZodError") {
-      return res.status(400).json({ ok: false, error: "ID inválido" });
+    if (error?.name === "ZodError") {
+      return res.status(400).json({ ok: false, error: "ID inválido", issues: error.issues });
     }
 
     if (error?.message === "ESPACIO_NOT_FOUND") {

@@ -3,18 +3,28 @@ import { EspaciosService } from "../../services/espacios";
 import { catalogoQuerySchema } from "../../validators/espacios";
 
 export const catalogo = async (req: Request, res: Response) => {
-  try {
-    const validatedQuery = catalogoQuerySchema.parse(req.query);
+  const parsed = catalogoQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({
+      ok: false,
+      error: "Query inválida",
+      issues: parsed.error.issues,
+    });
+  }
 
-    const data = await EspaciosService.catalogo(validatedQuery);
+  try {
+    const data = await EspaciosService.catalogo(parsed.data);
 
     return res.json({ ok: true, data });
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return res.status(400).json({ ok: false, error: "Query inválida", issues: error.issues });
-    }
+  } catch (error) {
+    console.error("❌ [ESPACIOS][CATALOGO]", {
+      error,
+      ip: req.ip,
+    });
 
-    console.error("❌ [catalogo] Error:", error);
-    return res.status(500).json({ ok: false, error: "Error al obtener espacios" });
+    return res.status(500).json({
+      ok: false,
+      error: "Error al obtener espacios",
+    });
   }
 };

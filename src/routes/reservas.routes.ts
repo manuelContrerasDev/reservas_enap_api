@@ -1,3 +1,7 @@
+// ============================================================
+// reservas.routes.ts — ENAP 2025 (PRODUCTION READY)
+// ============================================================
+
 import { Router } from "express";
 import { ReservasController } from "../controllers/reservas";
 
@@ -12,7 +16,6 @@ import { validateParams } from "../middlewares/validateParams";
 // Schemas
 import { crearReservaSchema } from "../validators/reservas/crear-reserva.schema";
 import { piscinaFechaSchema } from "../validators/reservas/piscina-fecha.schema";
-import { adminReservasQuerySchema } from "../validators/reservas/filtros-admin.schema";
 import { actualizarEstadoSchema } from "../validators/reservas/actualizar-estado-reserva.schema";
 import { idParamSchema } from "../validators/common/id-param.schema";
 import { actualizarInvitadosSchema } from "../validators/reservas/actualizar-invitados.schema";
@@ -26,17 +29,40 @@ const router = Router();
  * ============================================================ */
 
 /* ------------------------------------------------------------
- * CREAR RESERVA
+ * CREAR RESERVA (USER)
+ * POST /api/reservas
  * ------------------------------------------------------------ */
 router.post(
-  "/crear",
+  "/",
   authGuard,
   validate(crearReservaSchema),
   asyncHandler(ReservasController.crearReserva)
 );
 
 /* ------------------------------------------------------------
+ * MIS RESERVAS (SOCIO / EXTERNO)
+ * GET /api/reservas/mis-reservas
+ * ------------------------------------------------------------ */
+router.get(
+  "/mis-reservas",
+  authGuard,
+  asyncHandler(ReservasController.misReservas)
+);
+
+/* ------------------------------------------------------------
+ * LISTADO GENERAL (ADMIN)
+ * GET /api/reservas
+ * ------------------------------------------------------------ */
+router.get(
+  "/",
+  authGuard,
+  roleGuard(["ADMIN"]),
+  asyncHandler(ReservasController.obtenerReservasAdmin)
+);
+
+/* ------------------------------------------------------------
  * DISPONIBILIDAD PISCINA
+ * GET /api/reservas/piscina/disponibilidad
  * ------------------------------------------------------------ */
 router.get(
   "/piscina/disponibilidad",
@@ -46,67 +72,37 @@ router.get(
 );
 
 /* ------------------------------------------------------------
- * MIS RESERVAS (SOCIO / EXTERNO)
+ * EDITAR RESERVA (ADMIN)
+ * PATCH /api/reservas/:id
  * ------------------------------------------------------------ */
-router.get(
-  "/mias",
-  authGuard,
-  asyncHandler(ReservasController.misReservas)
-);
-
-/* ------------------------------------------------------------
- * LISTADO GENERAL (ADMIN / fallback a propias)
- * ------------------------------------------------------------ */
-router.get(
-  "/",
-  authGuard,
-  asyncHandler(async (req, res) => {
-    if (req.user?.role === "ADMIN") {
-      return ReservasController.obtenerReservasAdmin(req, res);
-    }
-    return ReservasController.misReservas(req, res);
-  })
-);
-
-/* ------------------------------------------------------------
- * EDITAR RESERVA (DATOS, NO FECHAS, NO MONTO)
- * ------------------------------------------------------------ */
-/**
- * @openapi
- * /api/reservas/{id}:
- *   patch:
- *     tags:
- *       - Reservas
- *     summary: Editar datos administrativos de una reserva
- *     description: >
- *       Permite editar datos del socio, responsable y uso de la reserva.
- *       No permite modificar fechas, cantidades ni montos.
- */
 router.patch(
   "/:id",
   authGuard,
+  roleGuard(["ADMIN"]),
   validateParams(idParamSchema),
   validate(editReservaSchema),
   asyncHandler(ReservasController.editarReserva)
 );
 
-
 /* ------------------------------------------------------------
- * EDITAR INVITADOS
+ * EDITAR INVITADOS (ADMIN)
+ * PATCH /api/reservas/:id/invitados
  * ------------------------------------------------------------ */
 router.patch(
   "/:id/invitados",
   authGuard,
+  roleGuard(["ADMIN"]),
   validateParams(idParamSchema),
   validate(actualizarInvitadosSchema),
   asyncHandler(ReservasController.actualizarInvitados)
 );
 
 /* ------------------------------------------------------------
- * CANCELAR RESERVA
+ * CANCELAR RESERVA (USER)
+ * PATCH /api/reservas/:id/cancelacion
  * ------------------------------------------------------------ */
 router.patch(
-  "/:id/cancelar",
+  "/:id/cancelacion",
   authGuard,
   validateParams(idParamSchema),
   asyncHandler(ReservasController.cancelarReserva)
@@ -114,6 +110,7 @@ router.patch(
 
 /* ------------------------------------------------------------
  * CAMBIAR ESTADO (ADMIN)
+ * PATCH /api/reservas/:id/estado
  * ------------------------------------------------------------ */
 router.patch(
   "/:id/estado",
@@ -126,9 +123,10 @@ router.patch(
 
 /* ------------------------------------------------------------
  * ELIMINAR RESERVA (ADMIN)
+ * DELETE /api/reservas/:id
  * ------------------------------------------------------------ */
 router.delete(
-  "/admin/:id",
+  "/:id",
   authGuard,
   roleGuard(["ADMIN"]),
   validateParams(idParamSchema),
@@ -136,7 +134,9 @@ router.delete(
 );
 
 /* ------------------------------------------------------------
- * OBTENER DETALLE (SIEMPRE AL FINAL)
+ * OBTENER DETALLE RESERVA (USER / ADMIN)
+ * ⚠️ DEJAR SIEMPRE AL FINAL
+ * GET /api/reservas/:id
  * ------------------------------------------------------------ */
 router.get(
   "/:id",

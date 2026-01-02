@@ -1,111 +1,173 @@
-// src/services/espacios/helpers.ts
-
-import { prisma } from "../../lib/db";
-import { Response } from "express";
-import { ModalidadCobro, TipoEspacio, ReservaEstado } from "@prisma/client";
+import { ModalidadCobro, TipoEspacio, Espacio, Prisma } from "@prisma/client";
 
 /* ============================================================
- * Mapper — Prisma → DTO (Frontend)
+ * Mapper — Prisma → DTO (MODEL FINAL)
  * ============================================================ */
-export const toEspacioDTO = (e: any) => ({
+export const toEspacioDTO = (e: Espacio) => ({
   id: e.id,
   nombre: e.nombre,
   tipo: e.tipo,
 
-  capacidad: e.capacidad,
-  capacidadExtra: e.capacidadExtra,
-
-  tarifaClp: e.tarifaClp,
-  tarifaExterno: e.tarifaExterno,
-
-  extraSocioPorPersona: e.extraSocioPorPersona,
-  extraTerceroPorPersona: e.extraTerceroPorPersona,
-
   descripcion: e.descripcion,
   imagenUrl: e.imagenUrl,
 
-  modalidadCobro: e.modalidadCobro,
+  capacidad: e.capacidad,
+
+  // estado / visibilidad / orden
   activo: e.activo,
+  visible: e.visible,
+  orden: e.orden,
+
+  modalidadCobro: e.modalidadCobro,
+
+  // tarifas base
+  precioBaseSocio: e.precioBaseSocio,
+  precioBaseExterno: e.precioBaseExterno,
+
+  // extras
+  precioPersonaAdicionalSocio: e.precioPersonaAdicionalSocio,
+  precioPersonaAdicionalExterno: e.precioPersonaAdicionalExterno,
+
+  precioPiscinaSocio: e.precioPiscinaSocio,
+  precioPiscinaExterno: e.precioPiscinaExterno,
 
   createdAt: e.createdAt,
   updatedAt: e.updatedAt,
 });
 
 /* ============================================================
- * Obtener espacio o lanzar 404 (usado por varios services)
+ * Normalización para CREAR
+ * Backend es fuente de verdad del dominio
  * ============================================================ */
-export async function getEspacioOr404(id: string) {
-  const espacio = await prisma.espacio.findUnique({ where: { id } });
-  if (!espacio) throw new Error("ESPACIO_NOT_FOUND");
-  return espacio;
-}
+export function normalizeCrearData(
+  data: any
+): Prisma.EspacioCreateInput {
+  const tipo = data.tipo as TipoEspacio;
 
-/* ============================================================
- * Normalización para crear espacio
- * ============================================================ */
-export function normalizeCrearData(data: any) {
+  // 🔒 modalidad según tipo (regla fija)
+  let modalidad: ModalidadCobro;
+  switch (tipo) {
+    case TipoEspacio.CABANA:
+      modalidad = ModalidadCobro.POR_NOCHE;
+      break;
+    case TipoEspacio.QUINCHO:
+      modalidad = ModalidadCobro.POR_DIA;
+      break;
+    case TipoEspacio.PISCINA:
+      modalidad = ModalidadCobro.POR_PERSONA;
+      break;
+    default:
+      modalidad = ModalidadCobro.POR_DIA;
+  }
+
   return {
-    nombre: data.nombre,
-    tipo: data.tipo as TipoEspacio,
-    capacidad: data.capacidad,
-    capacidadExtra: data.capacidadExtra ?? null,
-
-    tarifaClp: data.tarifaClp,
-    tarifaExterno: data.tarifaExterno ?? null,
-
-    extraSocioPorPersona: data.extraSocioPorPersona ?? null,
-    extraTerceroPorPersona: data.extraTerceroPorPersona ?? null,
-
-    descripcion: data.descripcion?.trim() || null,
-    imagenUrl: data.imagenUrl?.trim() || null,
-
-    modalidadCobro: data.modalidadCobro ?? ModalidadCobro.POR_NOCHE,
-    activo: data.activo ?? true,
-  };
-}
-
-/* ============================================================
- * Normalización para actualizar
- * ============================================================ */
-export function normalizeActualizarData(data: any, exists: any) {
-  return {
-    nombre: data.nombre ?? exists.nombre,
-    tipo: data.tipo ?? exists.tipo,
-
-    capacidad: data.capacidad ?? exists.capacidad,
-    capacidadExtra:
-      data.capacidadExtra !== undefined
-        ? data.capacidadExtra
-        : exists.capacidadExtra,
-
-    tarifaClp: data.tarifaClp ?? exists.tarifaClp,
-    tarifaExterno:
-      data.tarifaExterno !== undefined
-        ? data.tarifaExterno
-        : exists.tarifaExterno,
-
-    extraSocioPorPersona:
-      data.extraSocioPorPersona !== undefined
-        ? data.extraSocioPorPersona
-        : exists.extraSocioPorPersona,
-
-    extraTerceroPorPersona:
-      data.extraTerceroPorPersona !== undefined
-        ? data.extraTerceroPorPersona
-        : exists.extraTerceroPorPersona,
+    nombre: String(data.nombre).trim(),
+    tipo,
 
     descripcion:
-      data.descripcion?.trim() === ""
-        ? null
-        : data.descripcion ?? exists.descripcion,
+      typeof data.descripcion === "string"
+        ? data.descripcion.trim() || null
+        : null,
 
     imagenUrl:
-      data.imagenUrl?.trim() === ""
-        ? null
-        : data.imagenUrl ?? exists.imagenUrl,
+      typeof data.imagenUrl === "string"
+        ? data.imagenUrl.trim() || null
+        : null,
 
-    modalidadCobro: data.modalidadCobro ?? exists.modalidadCobro,
-    activo:
-      typeof data.activo === "boolean" ? data.activo : exists.activo,
+    capacidad: Number(data.capacidad),
+
+    activo: typeof data.activo === "boolean" ? data.activo : true,
+    visible: true,
+    orden: Number.isFinite(Number(data.orden)) ? Number(data.orden) : 0,
+
+    modalidadCobro: modalidad,
+
+    // tarifas
+    precioBaseSocio: Number(data.precioBaseSocio ?? 0),
+    precioBaseExterno: Number(data.precioBaseExterno ?? 0),
+
+    precioPersonaAdicionalSocio: Number(
+      data.precioPersonaAdicionalSocio ?? 3500
+    ),
+    precioPersonaAdicionalExterno: Number(
+      data.precioPersonaAdicionalExterno ?? 4500
+    ),
+
+    precioPiscinaSocio: Number(data.precioPiscinaSocio ?? 3500),
+    precioPiscinaExterno: Number(data.precioPiscinaExterno ?? 4500),
   };
+}
+
+/* ============================================================
+ * Normalización para ACTUALIZAR
+ * - No permite cambiar `visible`
+ * - Preserva modalidad coherente con el tipo
+ * ============================================================ */
+export function normalizeActualizarData(
+  data: any,
+  exists: Espacio
+): Prisma.EspacioUpdateInput {
+  const up: Prisma.EspacioUpdateInput = {};
+
+  if (data.nombre !== undefined) {
+    up.nombre = String(data.nombre).trim();
+  }
+
+  if (data.descripcion !== undefined) {
+    const v = String(data.descripcion ?? "").trim();
+    up.descripcion = v === "" ? null : v;
+  }
+
+  if (data.imagenUrl !== undefined) {
+    const v = String(data.imagenUrl ?? "").trim();
+    up.imagenUrl = v === "" ? null : v;
+  }
+
+  if (data.capacidad !== undefined) {
+    up.capacidad = Number(data.capacidad);
+  }
+
+  if (typeof data.activo === "boolean") {
+    up.activo = data.activo;
+  }
+
+  if (data.orden !== undefined) {
+    up.orden = Number(data.orden);
+  }
+
+  // 🔒 modalidad NO se cambia libremente (se protege en el service)
+  if (data.modalidadCobro !== undefined) {
+    up.modalidadCobro = exists.modalidadCobro;
+  }
+
+  // tarifas
+  if (data.precioBaseSocio !== undefined) {
+    up.precioBaseSocio = Number(data.precioBaseSocio);
+  }
+
+  if (data.precioBaseExterno !== undefined) {
+    up.precioBaseExterno = Number(data.precioBaseExterno);
+  }
+
+  if (data.precioPersonaAdicionalSocio !== undefined) {
+    up.precioPersonaAdicionalSocio = Number(
+      data.precioPersonaAdicionalSocio
+    );
+  }
+
+  if (data.precioPersonaAdicionalExterno !== undefined) {
+    up.precioPersonaAdicionalExterno = Number(
+      data.precioPersonaAdicionalExterno
+    );
+  }
+
+  if (data.precioPiscinaSocio !== undefined) {
+    up.precioPiscinaSocio = Number(data.precioPiscinaSocio);
+  }
+
+  if (data.precioPiscinaExterno !== undefined) {
+    up.precioPiscinaExterno = Number(data.precioPiscinaExterno);
+  }
+
+  return up;
 }

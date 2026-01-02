@@ -1,40 +1,59 @@
-// src/validators/reservas/edit-reserva.schema.ts
 import { z } from "zod";
-import { validarRangoFechas } from "./fechas.schema";
 import { validarResponsable } from "./responsable.schema";
-import { validarInvitados } from "./invitados.schema";
 
+/* ============================================================
+ * Helpers normalizados
+ * ============================================================ */
+const emailSchema = z
+  .string()
+  .trim()
+  .email("Correo inválido")
+  .transform((v) => v.toLowerCase());
+
+const textOptional = z.string().trim().min(3).optional();
+const rutOptional = z.string().trim().min(3, "RUT inválido").optional();
+const telOptional = z.string().trim().min(8, "Teléfono inválido").optional();
+
+/* ============================================================
+ * Editar reserva — CONTRATO ADMINISTRATIVO
+ *
+ * ❌ NO permite:
+ *  - fechas
+ *  - montos
+ *  - estado
+ *  - invitados
+ *
+ * ✅ SOLO:
+ *  - datos de contacto
+ *  - responsable
+ * ============================================================ */
 export const editReservaSchema = z
   .object({
-    nombreSocio: z.string().min(3).optional(),
-    rutSocio: z.string().min(5).optional(),
-    telefonoSocio: z.string().min(5).optional(),
-    correoEnap: z.string().email().optional(),
-    correoPersonal: z.string().email().optional(),
+    /* ================= SOCIO ================= */
+    nombreSocio: textOptional,
+    rutSocio: rutOptional,
+    telefonoSocio: telOptional,
 
+    correoEnap: emailSchema.optional(),
+    correoPersonal: emailSchema.nullable().optional(),
+
+    /* ================= REGLA ================= */
+    // ⚠️ Solo para reglas de negocio (NO persistente)
     socioPresente: z.boolean().optional(),
 
-    nombreResponsable: z.string().optional(),
-    rutResponsable: z.string().optional(),
-    emailResponsable: z.string().email().optional(),
-    telefonoResponsable: z.string().min(5).optional(),
-
-    invitados: z
-      .array(
-        z.object({
-          nombre: z.string().min(2),
-          rut: z.string().min(5),
-          edad: z.number().int().min(0).optional(),
-          esPiscina: z.boolean().optional().default(false),
-        })
-      )
-      .optional(),
+    /* ================= RESPONSABLE ================= */
+    nombreResponsable: textOptional.nullable().optional(),
+    rutResponsable: rutOptional.nullable().optional(),
+    emailResponsable: emailSchema.nullable().optional(),
+    telefonoResponsable: telOptional.nullable().optional(),
   })
   .superRefine((data, ctx) => {
+    /**
+     * 🔐 Regla ENAP:
+     * - Si socioPresente === false → responsable OBLIGATORIO
+     * - Si socioPresente === true  → responsable DEBE venir vacío
+     */
     validarResponsable(data, ctx);
-    if (data.invitados) validarInvitados(data, ctx);
   });
-
-
 
 export type EditReservaType = z.infer<typeof editReservaSchema>;

@@ -1,7 +1,4 @@
-// ============================================================
-// actualizar-invitados.controller.ts — ENAP 2025 (FINAL)
-// ============================================================
-
+// src/controllers/reservas/actualizar-invitados.controller.ts
 import { Response } from "express";
 import type { AuthRequest } from "../../types/global";
 
@@ -11,14 +8,10 @@ import { reservaToDTO } from "./utils/reservaToDTO";
 
 export const actualizarInvitados = async (req: AuthRequest, res: Response) => {
   try {
-    // --------------------------------------------------------
-    // 1) Validar payload
-    // --------------------------------------------------------
+    if (!req.user) throw new Error("NO_AUTH");
+
     const payload = actualizarInvitadosSchema.parse(req.body);
 
-    // --------------------------------------------------------
-    // 2) Ejecutar service
-    // --------------------------------------------------------
     const reserva = await ActualizarInvitadosReservaService.ejecutar(
       req.params.id,
       payload,
@@ -30,32 +23,28 @@ export const actualizarInvitados = async (req: AuthRequest, res: Response) => {
       message: "Invitados actualizados correctamente",
       data: reservaToDTO(reserva),
     });
-
   } catch (error: any) {
-    console.error("❌ [actualizar invitados]:", error);
+    const message = error?.message ?? "ERROR_ACTUALIZAR_INVITADOS";
+    console.error("❌ [actualizar invitados]:", message);
 
     const statusMap: Record<string, number> = {
       NO_AUTH: 401,
       NOT_FOUND: 404,
       NO_PERMITIDO: 403,
 
-      // Reglas de negocio
       RESERVA_NO_MODIFICABLE: 409,
       NO_PERMITIDO_TIEMPO: 409,
       FUERA_DE_VENTANA_EDICION: 409,
 
-      // Validaciones
       INVITADOS_INVALIDOS: 422,
       INVITADO_DATOS_INVALIDOS: 422,
       EDAD_INVITADO_INVALIDA: 422,
       CANTIDAD_ADULTOS_SUPERADA: 409,
     };
 
-    const status = statusMap[error.message] ?? 500;
-
-    return res.status(status).json({
+    return res.status(statusMap[message] ?? 500).json({
       ok: false,
-      error: error.message ?? "Error al actualizar invitados",
+      error: message,
     });
   }
 };

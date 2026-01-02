@@ -10,11 +10,12 @@ export const disponibilidad = async (req: Request, res: Response) => {
 
     return res.json({
       ok: true,
-      ...data,
+      id,
+      fechas: data.fechas ?? [],
     });
   } catch (error: any) {
-    if (error.name === "ZodError") {
-      return res.status(400).json({ ok: false, error: "ID inválido" });
+    if (error?.name === "ZodError") {
+      return res.status(400).json({ ok: false, error: "ID inválido", issues: error.issues });
     }
 
     if (error?.message === "ESPACIO_NOT_FOUND") {

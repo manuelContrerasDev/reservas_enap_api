@@ -1,4 +1,4 @@
-import { prisma } from "../../lib/db";
+import { prisma } from "../../../lib/db";
 import { Request, Response } from "express";
 
 
@@ -28,7 +28,6 @@ export const searchUsers = async (req: Request, res: Response) => {
         name: true,
         email: true,
         role: true,
-        authorizationsReceived: false,
       },
       take: 10,
       orderBy: {

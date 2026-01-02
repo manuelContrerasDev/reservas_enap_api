@@ -1,54 +1,44 @@
 // ============================================================
-// crear.service.ts — ENAP 2025 (FINAL SINCRONIZADO)
+// crear.service.ts — ENAP 2025 (PRODUCTION READY)
 // ============================================================
 
 import { prisma } from "../../lib/db";
-import { crearReservaSchema } from "../../validators/reservas";
 import { ReservaEstado, Role, TipoEspacio } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
 import { calcularReserva } from "../../utils/calcularReserva";
 import { ReservasCreateRepository } from "../../repositories/reservas";
 import type { AuthUser } from "../../types/global";
-
-
-
-const MAX_CABANA = 6;
-const MAX_QUINCHO_SOCIO = 15;
-const MAX_QUINCHO_EXTERNO = 10;
+import type { CrearReservaType } from "../../validators/reservas";
 
 export const CrearReservaService = {
-  async ejecutar(body: unknown, user: AuthUser){
+  async ejecutar(data: CrearReservaType, user: AuthUser) {
     if (!user) throw new Error("NO_AUTH");
 
-    // 1) Validación Zod
-    const data = crearReservaSchema.parse(body);
-
-    // 2) Obtener espacio
+    /* --------------------------------------------------------
+     * 1) Obtener espacio
+     * -------------------------------------------------------- */
     const espacio = await prisma.espacio.findUnique({
       where: { id: data.espacioId },
     });
     if (!espacio) throw new Error("ESPACIO_NOT_FOUND");
 
-    // 3) Validaciones de fecha
+    /* --------------------------------------------------------
+     * 2) Fechas
+     * -------------------------------------------------------- */
     const inicio = new Date(data.fechaInicio);
     const fin = new Date(data.fechaFin);
 
     if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
       throw new Error("FECHAS_INVALIDAS");
     }
-    if (fin <= inicio) throw new Error("FECHA_FIN_MENOR");
-    if (inicio.getDay() === 1) throw new Error("INICIO_LUNES_NO_PERMITIDO");
 
     const dias = differenceInCalendarDays(fin, inicio) + 1;
 
-    // Días válidos cabaña/quincho
+    /* --------------------------------------------------------
+    * 3) Disponibilidad (NO piscina)
+    * -------------------------------------------------------- */
     if (espacio.tipo !== TipoEspacio.PISCINA) {
-      if (dias < 3 || dias > 6) throw new Error("DIAS_INVALIDOS");
-    }
-
-    // 4) Disponibilidad (NO aplica piscina)
-    if (espacio.tipo !== TipoEspacio.PISCINA) {
-      const choque = await prisma.reserva.findFirst({
+      const solapadas = await prisma.reserva.count({
         where: {
           espacioId: espacio.id,
           estado: {
@@ -57,6 +47,7 @@ export const CrearReservaService = {
               ReservaEstado.CONFIRMADA,
             ],
           },
+          cancelledAt: null,
           NOT: {
             OR: [
               { fechaFin: { lte: inicio } },
@@ -65,11 +56,16 @@ export const CrearReservaService = {
           },
         },
       });
-      if (choque) throw new Error("FECHAS_NO_DISPONIBLES");
+
+      if (solapadas > 0) {
+        throw new Error("FECHAS_NO_DISPONIBLES");
+      }
     }
 
-    // 5) Normalizar invitados
-    const invitados = (data.invitados ?? []).map(i => ({
+    /* --------------------------------------------------------
+     * 4) Invitados y cantidades
+     * -------------------------------------------------------- */
+    const invitados = data.invitados.map(i => ({
       nombre: i.nombre.trim(),
       rut: i.rut.trim(),
       edad: i.edad ?? null,
@@ -83,14 +79,14 @@ export const CrearReservaService = {
     const cantidadNinos =
       invitados.filter(i => (i.edad ?? 0) < 12).length;
 
-    // 🔥 NUEVO — derivar cantidadPiscina desde invitados
-    const cantidadPiscina = invitados.filter(i => i.esPiscina === true).length;
+    const cantidadPiscina =
+      invitados.filter(i => i.esPiscina).length;
 
-    // 6) Capacidad según tipo
-    if (espacio.tipo === TipoEspacio.CABANA) {
-      if (cantidadAdultos + cantidadNinos > 6) {
-        throw new Error("CAPACIDAD_CABANA_SUPERADA");
-      }
+    /* --------------------------------------------------------
+     * 5) Capacidad
+     * -------------------------------------------------------- */
+    if (espacio.tipo === TipoEspacio.CABANA && cantidadAdultos + cantidadNinos > 6) {
+      throw new Error("CAPACIDAD_CABANA_SUPERADA");
     }
 
     if (espacio.tipo === TipoEspacio.QUINCHO) {
@@ -100,60 +96,64 @@ export const CrearReservaService = {
       }
     }
 
-    // 7) SOCIO / EXTERNO
-    const userId = user.id;
-    const role = user.role;
-
-    // 8) Cálculo financiero (CON cantidadPiscina derivado)
+    /* --------------------------------------------------------
+     * 6) Cálculo financiero
+     * -------------------------------------------------------- */
     const precios = calcularReserva({
-      espacio,
+      espacio: {
+        tipo: espacio.tipo,
+        modalidadCobro: espacio.modalidadCobro,
+        precioBaseSocio: espacio.precioBaseSocio,
+        precioBaseExterno: espacio.precioBaseExterno,
+        precioPersonaSocio: espacio.precioPersonaAdicionalSocio,
+        precioPersonaExterno: espacio.precioPersonaAdicionalExterno,
+        precioPiscinaSocio: espacio.precioPiscinaSocio,
+        precioPiscinaExterno: espacio.precioPiscinaExterno,
+      },
       dias,
       cantidadAdultos,
       cantidadNinos,
       cantidadPiscina,
       usoReserva: data.usoReserva,
-      role,
+      role: user.role,
     });
 
-    // 9) Crear reserva
-    const reserva = await ReservasCreateRepository.crearReserva({
-      userId,
-      espacioId: espacio.id,
-      fechaInicio: inicio,
-      fechaFin: fin,
-      dias,
+    /* --------------------------------------------------------
+     * 7) Persistencia (transacción)
+     * -------------------------------------------------------- */
+    const reserva = await prisma.$transaction(async tx => {
+      const r = await ReservasCreateRepository.crearReserva(tx, {
+        userId: user.id,
+        espacioId: espacio.id,
+        fechaInicio: inicio,
+        fechaFin: fin,
+        dias,
+        estado: ReservaEstado.PENDIENTE_PAGO,
+        expiresAt: new Date(Date.now() + 86400000),
+        cantidadAdultos,
+        cantidadNinos,
+        cantidadPiscina,
+        precioBaseSnapshot: precios.precioBaseSnapshot,
+        precioPersonaSnapshot: precios.precioPersonaSnapshot,
+        precioPiscinaSnapshot: precios.precioPiscinaSnapshot,
+        totalClp: precios.totalClp,
+        nombreSocio: data.nombreSocio,
+        rutSocio: data.rutSocio,
+        telefonoSocio: data.telefonoSocio,
+        correoEnap: data.correoEnap,
+        correoPersonal: data.correoPersonal ?? null,
+        usoReserva: data.usoReserva,
+        nombreResponsable: data.nombreResponsable ?? null,
+        rutResponsable: data.rutResponsable ?? null,
+        emailResponsable: data.emailResponsable ?? null,
+        telefonoResponsable: data.telefonoResponsable ?? null,
+        terminosAceptados: true,
+        terminosVersion: data.terminosVersion ?? "2025-ENAP",
+      });
 
-      estado: ReservaEstado.PENDIENTE_PAGO,
-      expiresAt: new Date(Date.now() + 86400000),
-
-      cantidadAdultos,
-      cantidadNinos,
-      cantidadPiscina,
-
-      precioBaseSnapshot: precios.precioBaseSnapshot,
-      precioPersonaSnapshot: precios.precioPersonaSnapshot,
-      precioPiscinaSnapshot: precios.precioPiscinaSnapshot,
-      totalClp: precios.totalClp,
-
-      nombreSocio: data.nombreSocio,
-      rutSocio: data.rutSocio,
-      telefonoSocio: data.telefonoSocio,
-      correoEnap: data.correoEnap,
-      correoPersonal: data.correoPersonal ?? null,
-
-      usoReserva: data.usoReserva,
-
-      nombreResponsable: data.nombreResponsable ?? null,
-      rutResponsable: data.rutResponsable ?? null,
-      emailResponsable: data.emailResponsable ?? null,
-      telefonoResponsable: data.telefonoResponsable ?? null,
-
-      terminosAceptados: true,
-      terminosVersion: data.terminosVersion ?? "2025-ENAP",
+      await ReservasCreateRepository.crearInvitados(tx, r.id, invitados);
+      return r;
     });
-
-    // 10) Crear invitados
-    await ReservasCreateRepository.crearInvitados(reserva.id, invitados);
 
     return reserva;
   },

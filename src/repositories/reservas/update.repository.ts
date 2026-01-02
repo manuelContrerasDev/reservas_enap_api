@@ -1,27 +1,45 @@
+// src/repositories/reservas/update.repository.ts
 import { prisma } from "../../lib/db";
+import { Prisma } from "@prisma/client";
+
+export type InvitadoCreateInput = {
+  nombre: string;
+  rut: string;
+  edad?: number | null;
+  esPiscina?: boolean;
+};
 
 export const ReservasUpdateRepository = {
-
-  obtenerReserva(id: string) {
-    return prisma.reserva.findUnique({
+  obtenerReserva(tx: Prisma.TransactionClient, id: string) {
+    return tx.reserva.findUnique({
       where: { id },
-      include: { invitados: true }
+      include: { invitados: true, espacio: true },
     });
   },
 
-  borrarInvitados(reservaId: string) {
-    return prisma.invitado.deleteMany({ where: { reservaId } });
+  borrarInvitados(tx: Prisma.TransactionClient, reservaId: string) {
+    return tx.invitado.deleteMany({ where: { reservaId } });
   },
 
-  crearInvitados(reservaId: string, invitados: any[]) {
-    return prisma.invitado.createMany({
-      data: invitados.map(i => ({
+  crearInvitados(
+    tx: Prisma.TransactionClient,
+    reservaId: string,
+    invitados: InvitadoCreateInput[]
+  ) {
+    if (!Array.isArray(invitados) || invitados.length === 0) return;
+
+    return tx.invitado.createMany({
+      data: invitados.map((i) => ({
         reservaId,
-        nombre: i.nombre,
-        rut: i.rut,
+        nombre: i.nombre.trim(),
+        rut: i.rut.trim(),
         edad: i.edad ?? null,
-      }))
+        esPiscina: i.esPiscina ?? false,
+      })),
     });
-  }
+  },
 
+  transaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {
+    return prisma.$transaction(fn);
+  },
 };
