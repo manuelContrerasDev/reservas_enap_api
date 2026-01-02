@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /* ===================== SOCIO ===================== */
-const socioSchema = z.object({
+export const socioSchema = z.object({
   nombre: z.string().min(1),
   rut: z.string().min(1),
   telefono: z.string().min(1),
@@ -10,15 +10,15 @@ const socioSchema = z.object({
 });
 
 /* ================= RESPONSABLE =================== */
-const responsableSchema = z.object({
+export const responsableSchema = z.object({
   nombre: z.string().min(1),
   rut: z.string().min(1),
-  email: z.string().email().optional(),
-  telefono: z.string().optional(),
+  email: z.string().email(),
+  telefono: z.string().min(1),
 });
 
-/* ================= RESERVA ======================= */
-export const reservaManualSchema = z
+/* ================= RESERVA (REQUEST) ============= */
+export const reservaManualRequestSchema = z
   .object({
     userId: z.string().uuid(),
     creadaPor: z.string().uuid(),
@@ -27,9 +27,9 @@ export const reservaManualSchema = z
     fechaInicio: z.string(),
     fechaFin: z.string(),
 
-    cantidadAdultos: z.number().int().min(1),
-    cantidadNinos: z.number().int().min(0),
-    cantidadPiscina: z.number().int().min(0),
+    cantidadAdultos: z.coerce.number().int().min(1),
+    cantidadNinos: z.coerce.number().int().min(0),
+    cantidadPiscina: z.coerce.number().int().min(0),
 
     usoReserva: z.enum(["USO_PERSONAL", "CARGA_DIRECTA", "TERCEROS"]),
     marcarPagada: z.boolean().optional(),
@@ -39,22 +39,25 @@ export const reservaManualSchema = z
     socio: socioSchema,
     responsable: responsableSchema.nullable().optional(),
   })
-  .transform((data) => ({
-    ...data,
+  .superRefine((data, ctx) => {
+    if (!data.socioPresente && !data.responsable) {
+      ctx.addIssue({
+        path: ["responsable"],
+        code: z.ZodIssueCode.custom,
+        message: "Responsable obligatorio cuando el socio no está presente",
+      });
+    }
 
-    // 🔽 flatten SOCIO
-    nombreSocio: data.socio.nombre,
-    rutSocio: data.socio.rut,
-    telefonoSocio: data.socio.telefono,
-    correoEnap: data.socio.correoEnap,
-    correoPersonal: data.socio.correoPersonal ?? null,
-
-    // 🔽 flatten RESPONSABLE
-    nombreResponsable: data.responsable?.nombre ?? null,
-    rutResponsable: data.responsable?.rut ?? null,
-    emailResponsable: data.responsable?.email ?? null,
-    telefonoResponsable: data.responsable?.telefono ?? null,
-  }));
+    if (data.socioPresente && data.responsable) {
+      ctx.addIssue({
+        path: ["responsable"],
+        code: z.ZodIssueCode.custom,
+        message: "No debe haber responsable si el socio está presente",
+      });
+    }
+  });
 
 /* ================= TIPOS ========================= */
-export type ReservaManualParsed = z.output<typeof reservaManualSchema>;
+export type ReservaManualRequest = z.infer<
+  typeof reservaManualRequestSchema
+>;

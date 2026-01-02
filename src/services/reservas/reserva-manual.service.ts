@@ -1,50 +1,27 @@
-// ============================================================
-// reserva-manual.service.ts — ENAP 2025 (SYNC FINAL)
-// ============================================================
-
 import { prisma } from "../../lib/db";
 import { ReservaEstado, TipoEspacio, Role } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
 import { calcularReserva } from "../../utils/calcularReserva";
 import { ReservasManualRepository } from "../../repositories/reservas/manual.repository";
-import type { ReservaManualParsed } from "../../validators/reservas/reservaManual.schema";
+import type { ReservaManualRequest } from "../../validators/reservas/reservaManual.schema";
+import { mapReservaManualToCreateInput } from "../../mappers/reservaManual.mapper";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EXPIRES_IN_MS = DAY_MS;
 
 export const ReservaManualService = {
-  async crear(data: ReservaManualParsed) {
+  async crear(data: ReservaManualRequest) {
     const {
-      // Identidad
       userId,
       espacioId,
       creadaPor,
-
-      // Fechas
       fechaInicio,
       fechaFin,
-
-      // Cantidades
       cantidadAdultos,
       cantidadNinos,
       cantidadPiscina,
-
-      // Negocio
       usoReserva,
       marcarPagada = false,
-
-      // 🔽 YA FLATTEN (desde Zod.transform)
-      nombreSocio,
-      rutSocio,
-      telefonoSocio,
-      correoEnap,
-      correoPersonal,
-
-      nombreResponsable,
-      rutResponsable,
-      emailResponsable,
-      telefonoResponsable,
-
       socioPresente,
     } = data;
 
@@ -55,13 +32,9 @@ export const ReservaManualService = {
     if (!espacioId) throw new Error("ESPACIO_ID_REQUERIDO");
     if (!creadaPor) throw new Error("ADMIN_ID_REQUERIDO");
 
-    if (typeof socioPresente !== "boolean") {
-      throw new Error("SOCIO_PRESENTE_REQUERIDO");
-    }
-
-    const adultos = Math.max(0, Number(cantidadAdultos));
-    const ninos = Math.max(0, Number(cantidadNinos));
-    const piscina = Math.max(0, Number(cantidadPiscina));
+    const adultos = Math.max(0, cantidadAdultos);
+    const ninos = Math.max(0, cantidadNinos);
+    const piscina = Math.max(0, cantidadPiscina);
 
     if (adultos < 1) {
       throw new Error("DEBE_HABER_AL_MENOS_1_ADULTO");
@@ -102,25 +75,7 @@ export const ReservaManualService = {
     }
 
     /* --------------------------------------------------------
-     * 3) Responsable (REGLA REAL ENAP)
-     * -------------------------------------------------------- */
-    if (!socioPresente) {
-      if (!nombreResponsable || !rutResponsable) {
-        throw new Error("RESPONSABLE_OBLIGATORIO");
-      }
-    } else {
-      if (
-        nombreResponsable ||
-        rutResponsable ||
-        emailResponsable ||
-        telefonoResponsable
-      ) {
-        throw new Error("RESPONSABLE_NO_PERMITIDO");
-      }
-    }
-
-    /* --------------------------------------------------------
-     * 4) Capacidad
+     * 3) Capacidad
      * -------------------------------------------------------- */
     const totalPersonas = adultos + ninos;
 
@@ -136,7 +91,7 @@ export const ReservaManualService = {
     }
 
     /* --------------------------------------------------------
-     * 5) Disponibilidad
+     * 4) Disponibilidad
      * -------------------------------------------------------- */
     if (espacio.tipo !== TipoEspacio.PISCINA) {
       const conflicto = await prisma.reserva.findFirst({
@@ -151,13 +106,11 @@ export const ReservaManualService = {
         },
       });
 
-      if (conflicto) {
-        throw new Error("FECHAS_NO_DISPONIBLES");
-      }
+      if (conflicto) throw new Error("FECHAS_NO_DISPONIBLES");
     }
 
     /* --------------------------------------------------------
-     * 6) Cálculo financiero (motor oficial)
+     * 5) Cálculo financiero
      * -------------------------------------------------------- */
     const precios = calcularReserva({
       espacio,
@@ -170,49 +123,27 @@ export const ReservaManualService = {
     });
 
     /* --------------------------------------------------------
-     * 7) Persistencia
+     * 6) Persistencia (mapper)
      * -------------------------------------------------------- */
     const expiresAt = marcarPagada
       ? null
       : new Date(Date.now() + EXPIRES_IN_MS);
 
+    const createData = {
+      ...mapReservaManualToCreateInput(data),
+      dias,
+      estado: marcarPagada
+        ? ReservaEstado.CONFIRMADA
+        : ReservaEstado.PENDIENTE_PAGO,
+      expiresAt,
+      precioBaseSnapshot: precios.precioBaseSnapshot,
+      precioPersonaSnapshot: precios.precioPersonaSnapshot,
+      precioPiscinaSnapshot: precios.precioPiscinaSnapshot,
+      totalClp: precios.totalClp,
+    };
+
     return prisma.$transaction(async (tx) => {
-      return ReservasManualRepository.crear(tx, {
-        userId,
-        espacioId,
-
-        fechaInicio: inicio,
-        fechaFin: fin,
-        dias,
-
-        usoReserva,
-        estado: marcarPagada
-          ? ReservaEstado.CONFIRMADA
-          : ReservaEstado.PENDIENTE_PAGO,
-        expiresAt,
-
-        cantidadAdultos: adultos,
-        cantidadNinos: ninos,
-        cantidadPiscina: piscina,
-
-        precioBaseSnapshot: precios.precioBaseSnapshot,
-        precioPersonaSnapshot: precios.precioPersonaSnapshot,
-        precioPiscinaSnapshot: precios.precioPiscinaSnapshot,
-        totalClp: precios.totalClp,
-
-        nombreSocio,
-        rutSocio,
-        telefonoSocio,
-        correoEnap,
-        correoPersonal,
-
-        nombreResponsable,
-        rutResponsable,
-        emailResponsable,
-        telefonoResponsable,
-
-        creadaPor,
-      });
+      return ReservasManualRepository.crear(tx, createData);
     });
   },
 };
