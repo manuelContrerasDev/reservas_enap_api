@@ -1,4 +1,3 @@
-// src/middlewares/rateLimit.ts
 import rateLimit from "express-rate-limit";
 
 export const apiLimiter = rateLimit({
@@ -6,9 +5,7 @@ export const apiLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    error: "Demasiadas peticiones desde esta IP, inténtalo más tarde 🕐",
-  },
+  message: { ok: false, error: "Demasiadas peticiones desde esta IP, inténtalo más tarde." },
 });
 
 export const strictLimiter = rateLimit({
@@ -16,7 +13,5 @@ export const strictLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    error: "Demasiadas solicitudes. Intenta nuevamente más tarde.",
-  },
+  message: { ok: false, error: "Demasiadas solicitudes. Intenta nuevamente más tarde." },
 });

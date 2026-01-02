@@ -1,28 +1,13 @@
-// src/middlewares/asyncHandler.ts
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
 /**
- * Tipo base para cualquier controlador async.
- */
-type AsyncController = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => Promise<any>;
-
-/**
- * ============================================================
- * 🧩 asyncHandler
- * ------------------------------------------------------------
- * Wrapper que captura errores de funciones async y los envía
- * automáticamente al errorHandler global sin usar try/catch
- * repetidamente en cada controlador.
- * 
- * Esto mantiene tus controllers limpios y profesionales.
- * ============================================================
+ * Wrapper para controllers async.
+ * Evita try/catch repetido y enruta errores al errorHandler.
  */
 export const asyncHandler =
-  (controller: AsyncController) =>
-  (req: Request, res: Response, next: NextFunction): void => {
-    Promise.resolve(controller(req, res, next)).catch(next);
+  <TReq extends Request = Request>(
+    controller: (req: TReq, res: Response, next: NextFunction) => Promise<unknown>
+  ): RequestHandler =>
+  (req, res, next) => {
+    void Promise.resolve(controller(req as TReq, res, next)).catch(next);
   };

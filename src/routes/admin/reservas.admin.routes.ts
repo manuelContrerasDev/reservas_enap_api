@@ -3,6 +3,7 @@ import { Router } from "express";
 import { ReservasAdminController } from "../../controllers/reservas/admin";
 import { authGuard } from "../../middlewares/authGuard";
 import { roleGuard } from "../../middlewares/roleGuard";
+import { asyncHandler } from "../../middlewares/asyncHandler";
 import { Role } from "@prisma/client";
 
 const router = Router();
@@ -15,7 +16,7 @@ router.post(
   "/crear",
   authGuard,
   roleGuard([Role.ADMIN]),
-  ReservasAdminController.crearReservaManualAdmin
+  asyncHandler(ReservasAdminController.crearReservaManualAdmin)
 );
 
 export default router;

@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { authGuard } from "../../middlewares/authGuard";
 import { roleGuard } from "../../middlewares/roleGuard";
+import { asyncHandler } from "../../middlewares/asyncHandler";
 import { Role } from "@prisma/client";
 import { prisma } from "../../lib/db";
 import z from "zod";
@@ -15,37 +16,33 @@ router.get(
   "/search",
   authGuard,
   roleGuard([Role.ADMIN]),
-  async (req, res) => {
-    try {
-      const schema = z.object({
-        q: z.string().min(1),
-      });
+  asyncHandler(async (req, res) => {
+    const schema = z.object({
+      q: z.string().min(1),
+    });
 
-      const { q } = schema.parse(req.query);
+    const { q } = schema.parse(req.query);
 
-      const users = await prisma.user.findMany({
-        where: {
-          OR: [
-            { rut: { contains: q, mode: "insensitive" } },
-            { name: { contains: q, mode: "insensitive" } },
-            { email: { contains: q, mode: "insensitive" } },
-          ],
-        },
-        select: {
-          id: true,
-          rut: true,
-          name: true,
-          email: true,
-          role: true,
-        },
-        take: 10,
-      });
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { rut: { contains: q, mode: "insensitive" } },
+          { name: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+        ],
+      },
+      select: {
+        id: true,
+        rut: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+      take: 10,
+    });
 
-      res.json({ users });
-    } catch {
-      res.status(400).json({ error: "Consulta inválida" });
-    }
-  }
+    res.json({ ok: true, users });
+  })
 );
 
 export default router;
