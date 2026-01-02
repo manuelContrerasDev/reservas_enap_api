@@ -3,49 +3,22 @@ import "./load-env";
 
 import path from "path";
 
-const required = (name: string, value: any) => {
-  if (!value) {
-    console.error(`❌ Falta variable de entorno: ${name}`);
-    throw new Error(`Missing ENV variable: ${name}`);
-  }
-};
-
-// Validar solo si NO estamos en modo prisma
-if (process.env.NODE_ENV !== "prisma") {
-  required("DATABASE_URL", process.env.DATABASE_URL);
-  required("JWT_SECRET", process.env.JWT_SECRET);
-  required("WEB_URL", process.env.WEB_URL);
-
-  if (process.env.NODE_ENV === "production") {
-    required("WEBPAY_COMMERCE_CODE", process.env.WEBPAY_COMMERCE_CODE);
-    required("WEBPAY_API_KEY", process.env.WEBPAY_API_KEY);
-    required("WEBPAY_ENV", process.env.WEBPAY_ENV);
-    required("WEBPAY_RETURN_URL", process.env.WEBPAY_RETURN_URL);
-    required("WEBPAY_FINAL_URL", process.env.WEBPAY_FINAL_URL);
-  }
-
-  console.log("✔ ENV cargado y validado correctamente");
-}
-
-// ============================================================
-// Imports del servidor
-// ============================================================
-
 /// <reference path="./types/express-xss-sanitizer.d.ts" />
 
 import express, { Application } from "express";
 import morgan from "morgan";
 import { xss } from "express-xss-sanitizer";
-import { prisma } from "./lib/db";
 import swaggerUi from "swagger-ui-express";
+
+import { prisma } from "./lib/db";
 import { swaggerSpec } from "./docs/swagger";
 
-// Seguridad y control
 import { security } from "./middlewares/security";
 import { apiLimiter } from "./middlewares/rateLimit";
-
-// 🔥 Handler oficial de errores
 import { errorHandler } from "./middlewares/errorHandler";
+
+// ✅ Fuente única de verdad para ENV
+import { env } from "./config/env";
 
 // Rutas
 import authRoutes from "./routes/auth.routes";
@@ -59,16 +32,13 @@ import testRoutes from "./routes/test.routes";
 import adminReservasRoutes from "./routes/admin/reservas.admin.routes";
 import adminUsersRoutes from "./routes/admin/users.admin.routes";
 
-// ============================================================
-// App Config
-// ============================================================
 const app: Application = express();
 
-const PORT = Number(process.env.PORT) || 4000;
-const NODE_ENV = process.env.NODE_ENV || "development";
+const PORT = Number(env.PORT) || Number(process.env.PORT) || 4000;
+const NODE_ENV = env.NODE_ENV;
 
 console.log(`🌍 Modo: ${NODE_ENV}`);
-console.log(`🔑 Variables ENV cargadas correctamente.`);
+console.log(`🔑 ENV validado OK (ENABLE_EMAIL=${env.ENABLE_EMAIL}, ENABLE_WEBPAY=${env.ENABLE_WEBPAY})`);
 
 const appRootDir = path.resolve();
 
@@ -77,16 +47,13 @@ const appRootDir = path.resolve();
 // ============================================================
 app.set("trust proxy", 1);
 
-// 🔒 Seguridad centralizada
 app.use(security.helmet);
 app.use(security.cors);
 
-// Parsers y logs
 app.use(xss());
 app.use(express.json({ limit: "12kb" }));
 app.use(morgan(NODE_ENV === "production" ? "combined" : "dev"));
 
-// 🚦 PASO 3 — Rate limit por contexto
 app.use("/api", apiLimiter);
 
 // ============================================================
@@ -95,14 +62,16 @@ app.use("/api", apiLimiter);
 app.use("/images", express.static(path.join(appRootDir, "public/images")));
 
 // ============================================================
-// Swagger Docs
+// Swagger Docs (solo DEV)
 // ============================================================
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+if (NODE_ENV !== "production") {
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.get("/docs.json", (_, res) => {
-  res.setHeader("Content-Type", "application/json");
-  res.send(swaggerSpec);
-});
+  app.get("/docs.json", (_, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.send(swaggerSpec);
+  });
+}
 
 // ============================================================
 // Rutas API
@@ -110,18 +79,32 @@ app.get("/docs.json", (_, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/espacios", espaciosRoutes);
 app.use("/api/reservas", reservasRoutes);
+
+// ✅ Si /api/pagos hoy muestra info estática de transferencia, puede quedarse.
+// ✅ Si tenía lógica webpay interna, igual no se activará si tu código depende de ENABLE_WEBPAY.
 app.use("/api/pagos", pagosRoutes);
-app.use("/api/debug", debugRoutes);
+
+// Admin
 app.use("/api/admin/reservas", adminReservasRoutes);
 app.use("/api/admin/users", adminUsersRoutes);
-app.use("/api", testRoutes);
+
+// Debug/Test solo DEV
+if (NODE_ENV !== "production") {
+  app.use("/api/debug", debugRoutes);
+  app.use("/api", testRoutes);
+}
 
 // ============================================================
-// Health
+// Health (Render friendly + DB check)
 // ============================================================
-app.get("/health", (_, res) =>
-  res.status(200).json({ status: "ok", env: NODE_ENV })
-);
+app.get("/health", async (_, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ status: "ok", env: NODE_ENV });
+  } catch {
+    res.status(500).json({ status: "error", db: "disconnected", env: NODE_ENV });
+  }
+});
 
 // ============================================================
 // Index
@@ -140,9 +123,7 @@ app.get("/", (_, res) => {
 // ============================================================
 
 // 404
-app.use((req, res) =>
-  res.status(404).json({ ok: false, error: "Ruta no encontrada" })
-);
+app.use((_, res) => res.status(404).json({ ok: false, error: "Ruta no encontrada" }));
 
 // Handler global ENAP
 app.use(errorHandler);
@@ -150,7 +131,7 @@ app.use(errorHandler);
 // ============================================================
 // Inicio del servidor
 // ============================================================
-const server = app.listen(PORT, async () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Servidor TS (${NODE_ENV}) en puerto ${PORT}`);
 });
 
