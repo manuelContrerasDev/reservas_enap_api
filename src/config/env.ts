@@ -1,10 +1,16 @@
 // src/config/env.ts
 import dotenv from "dotenv";
+import path from "path";
 import { z } from "zod";
 
-// Cargar env excepto cuando prisma ejecuta migrate/seed
-if (process.env.NODE_ENV !== "prisma") {
-  dotenv.config();
+const NODE_ENV = (process.env.NODE_ENV ?? "development") as
+  | "development"
+  | "production"
+  | "prisma";
+
+// Cargar .env solo en development (en Render, vienen del sistema)
+if (NODE_ENV === "development") {
+  dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 }
 
 const EnvSchema = z
@@ -32,7 +38,7 @@ const EnvSchema = z
     WEBPAY_API_KEY: z.string().optional(),
     WEBPAY_ENV: z.string().optional(),
     WEBPAY_RETURN_URL: z.string().optional(),
-    WEBPAY_FINAL_URL: z.string().optional(),
+    WEBPAY_FINAL_URL: z.string().optional()
   })
   .superRefine((env, ctx) => {
     // 🔐 Email obligatorio si ENABLE_EMAIL=true (Brevo)
@@ -44,20 +50,20 @@ const EnvSchema = z
           ctx.addIssue({
             path: [key],
             message: `${key} es obligatorio cuando ENABLE_EMAIL=true`,
-            code: z.ZodIssueCode.custom,
+            code: z.ZodIssueCode.custom
           });
         }
       });
     }
 
-    // 💳 Webpay solo si se activa (CONGELADO => ENABLE_WEBPAY=false)
+    // 💳 Webpay solo si se activa
     if (env.ENABLE_WEBPAY === "true") {
       const required = [
         "WEBPAY_COMMERCE_CODE",
         "WEBPAY_API_KEY",
         "WEBPAY_ENV",
         "WEBPAY_RETURN_URL",
-        "WEBPAY_FINAL_URL",
+        "WEBPAY_FINAL_URL"
       ] as const;
 
       required.forEach((key) => {
@@ -65,7 +71,7 @@ const EnvSchema = z
           ctx.addIssue({
             path: [key],
             message: `${key} es obligatorio cuando ENABLE_WEBPAY=true`,
-            code: z.ZodIssueCode.custom,
+            code: z.ZodIssueCode.custom
           });
         }
       });
@@ -73,3 +79,7 @@ const EnvSchema = z
   });
 
 export const env = EnvSchema.parse(process.env);
+
+// Helpers pro (evita comparar strings por todo el proyecto)
+export const EMAIL_ENABLED = env.ENABLE_EMAIL === "true";
+export const WEBPAY_ENABLED = env.ENABLE_WEBPAY === "true";

@@ -1,10 +1,6 @@
 import "module-alias/register";
-import "./load-env";
 
 import path from "path";
-
-/// <reference path="./types/express-xss-sanitizer.d.ts" />
-
 import express, { Application } from "express";
 import morgan from "morgan";
 import { xss } from "express-xss-sanitizer";
@@ -17,8 +13,7 @@ import { security } from "./middlewares/security";
 import { apiLimiter } from "./middlewares/rateLimit";
 import { errorHandler } from "./middlewares/errorHandler";
 
-// ✅ Fuente única de verdad para ENV
-import { env } from "./config/env";
+import { env, EMAIL_ENABLED, WEBPAY_ENABLED } from "./config/env";
 
 // Rutas
 import authRoutes from "./routes/auth.routes";
@@ -38,9 +33,9 @@ const PORT = Number(env.PORT) || Number(process.env.PORT) || 4000;
 const NODE_ENV = env.NODE_ENV;
 
 console.log(`🌍 Modo: ${NODE_ENV}`);
-console.log(`🔑 ENV validado OK (ENABLE_EMAIL=${env.ENABLE_EMAIL}, ENABLE_WEBPAY=${env.ENABLE_WEBPAY})`);
+console.log(`🔑 ENV validado OK (ENABLE_EMAIL=${EMAIL_ENABLED}, ENABLE_WEBPAY=${WEBPAY_ENABLED})`);
 
-const appRootDir = path.resolve();
+const appRootDir = process.cwd();
 
 // ============================================================
 // Seguridad y middlewares
@@ -79,9 +74,6 @@ if (NODE_ENV !== "production") {
 app.use("/api/auth", authRoutes);
 app.use("/api/espacios", espaciosRoutes);
 app.use("/api/reservas", reservasRoutes);
-
-// ✅ Si /api/pagos hoy muestra info estática de transferencia, puede quedarse.
-// ✅ Si tenía lógica webpay interna, igual no se activará si tu código depende de ENABLE_WEBPAY.
 app.use("/api/pagos", pagosRoutes);
 
 // Admin
@@ -114,18 +106,14 @@ app.get("/", (_, res) => {
     status: "ok",
     env: NODE_ENV,
     version: "1.0.0",
-    message: "API Reservas ENAP — Backend Operativo",
+    message: "API Reservas ENAP — Backend Operativo"
   });
 });
 
 // ============================================================
-// Error handlers oficiales
+// 404 + Error handler global
 // ============================================================
-
-// 404
 app.use((_, res) => res.status(404).json({ ok: false, error: "Ruta no encontrada" }));
-
-// Handler global ENAP
 app.use(errorHandler);
 
 // ============================================================
@@ -136,13 +124,35 @@ const server = app.listen(PORT, () => {
 });
 
 // ============================================================
-// Shutdown
+// Shutdown PRO (anti-colgado)
 // ============================================================
-const shutdown = async () => {
-  console.log("🧹 Cerrando servidor y DB...");
-  await prisma.$disconnect();
+let isShuttingDown = false;
+
+const shutdown = async (reason: string, err?: unknown) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  if (err) console.error(`🧨 Shutdown por ${reason}:`, err);
+  else console.log(`🧹 Cerrando servidor y DB (${reason})...`);
+
+  // Hard exit fallback (evita quedarse colgado en producción)
+  const forceExit = setTimeout(() => {
+    console.error("⏱️ Force exit: shutdown timeout");
+    process.exit(1);
+  }, 8000);
+  forceExit.unref();
+
+  try {
+    await prisma.$disconnect();
+  } catch (e) {
+    console.error("⚠️ Error desconectando Prisma:", e);
+  }
+
   server.close(() => process.exit(0));
 };
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+process.on("unhandledRejection", (err) => shutdown("unhandledRejection", err));
+process.on("uncaughtException", (err) => shutdown("uncaughtException", err));
