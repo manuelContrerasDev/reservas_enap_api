@@ -1,38 +1,23 @@
-// ============================================================
-// obtener-reserva.service.ts — ENAP 2025 (FINAL)
-// ============================================================
-
 import { ReservasReadRepository } from "../../repositories/reservas";
 import type { AuthUser } from "../../types/global";
+import { Role } from "@prisma/client";
 
 export const ObtenerReservaService = {
   async ejecutar(reservaId: string, user: AuthUser) {
-    /* --------------------------------------------------------
-     * 0) Defensa básica
-     * -------------------------------------------------------- */
-    if (!user) {
-      throw new Error("NO_AUTH");
+    if (!user?.id) throw new Error("NO_AUTH");
+
+    // Defensa mínima (el schema ideal va en validateParams)
+    if (!reservaId || reservaId.trim().length < 10) {
+      throw new Error("INVALID_ID");
     }
 
-    /* --------------------------------------------------------
-     * 1) Obtener reserva
-     * -------------------------------------------------------- */
     const reserva = await ReservasReadRepository.detalle(reservaId);
+    if (!reserva) throw new Error("NOT_FOUND");
 
-    if (!reserva) {
-      throw new Error("NOT_FOUND");
-    }
-
-    /* --------------------------------------------------------
-     * 2) Autorización
-     * -------------------------------------------------------- */
-    if (user.role !== "ADMIN" && reserva.userId !== user.id) {
+    if (user.role !== Role.ADMIN && reserva.userId !== user.id) {
       throw new Error("FORBIDDEN");
     }
 
-    /* --------------------------------------------------------
-     * 3) Retornar reserva (lectura pura)
-     * -------------------------------------------------------- */
     return reserva;
   },
 };

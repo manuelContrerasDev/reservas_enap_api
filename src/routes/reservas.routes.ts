@@ -64,12 +64,11 @@ router.get(
  * DISPONIBILIDAD PISCINA
  * GET /api/reservas/piscina/disponibilidad
  * ------------------------------------------------------------ */
-router.get(
-  "/piscina/disponibilidad",
-  authGuard,
-  validateQuery(piscinaFechaSchema),
-  asyncHandler(ReservasController.disponibilidadPiscina)
-);
+  router.get(
+    "/piscina/disponibilidad",
+    validateQuery(piscinaFechaSchema),
+    asyncHandler(ReservasController.disponibilidadPiscina)
+  );
 
 /* ------------------------------------------------------------
  * EDITAR RESERVA (ADMIN)
