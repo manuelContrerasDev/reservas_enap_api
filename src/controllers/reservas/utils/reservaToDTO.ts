@@ -1,3 +1,4 @@
+// src/controllers/reservas/utils/reservaToDTO.ts
 export const reservaToDTO = (r: any) => ({
   id: r.id,
 
@@ -18,8 +19,14 @@ export const reservaToDTO = (r: any) => ({
   fechaInicio: r.fechaInicio,
   fechaFin: r.fechaFin,
   dias: r.dias,
+
   estado: r.estado,
   totalClp: r.totalClp,
+
+  // ✅ importantes para auditoría y UI
+  expiresAt: r.expiresAt ?? null,
+  cancelledAt: r.cancelledAt ?? null,
+  cancelledBy: r.cancelledBy ?? null,
 
   cantidadAdultos: r.cantidadAdultos ?? 0,
   cantidadNinos: r.cantidadNinos ?? 0,
@@ -56,6 +63,7 @@ export const reservaToDTO = (r: any) => ({
       nombre: i.nombre,
       rut: i.rut,
       edad: i.edad ?? null,
+      esPiscina: i.esPiscina ?? false,
     })) ?? [],
 
   pago: r.pago

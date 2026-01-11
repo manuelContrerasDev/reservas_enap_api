@@ -1,4 +1,3 @@
-// src/controllers/reservas/editar.controller.ts
 import { Response } from "express";
 import type { AuthRequest } from "../../types/global";
 
@@ -8,9 +7,13 @@ import { reservaToDTO } from "./utils/reservaToDTO";
 
 export const editarReserva = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) throw new Error("NO_AUTH");
+    if (!req.user) {
+      return res.status(401).json({
+        ok: false,
+        error: "NO_AUTH",
+      });
+    }
 
-    // Refuerzo de contrato (no confiar solo en router)
     const payload = editReservaSchema.parse(req.body);
 
     const reserva = await EditarReservaService.ejecutar(

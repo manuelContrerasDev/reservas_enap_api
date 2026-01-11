@@ -1,6 +1,6 @@
 // src/services/espacios/admin/crear.service.ts
 
-import { EspaciosRepository } from "../../../repositories/espacios.repository";
+import { EspaciosRepository } from "../../../repositories/espacios/espacios.repository";
 import { normalizeCrearData, toEspacioDTO } from "../helpers";
 import { TipoEspacio, ModalidadCobro } from "@prisma/client";
 

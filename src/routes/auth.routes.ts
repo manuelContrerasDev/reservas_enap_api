@@ -11,7 +11,7 @@ import {
   registerSchema,
   resetRequestSchema,
   resetPasswordSchema,
-} from "../validators/auth.schema";
+} from "../validators/auth/auth.schema";
 
 const router = Router();
 

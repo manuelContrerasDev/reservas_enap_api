@@ -1,23 +1,20 @@
-// 🌐 TIPOS GLOBALES — SISTEMA RESERVAS ENAP
-
 import type { Request } from "express";
-
-export type UserRole = "ADMIN" | "SOCIO" | "EXTERNO";
+import type { Role } from "@prisma/client";
 
 export interface TokenPayload {
   sub: string;
   email: string;
-  role: UserRole | string;
+  role: Role | string; // tolera tokens antiguos, pero authGuard normaliza
   name?: string;
   iat?: number;
   exp?: number;
 }
 
 export interface AuthUser {
-  id: string;       // ← requerido por servicios
+  id: string;
   sub: string;
   email: string;
-  role: UserRole;
+  role: Role; // ✅ Prisma enum
   name?: string;
 }
 

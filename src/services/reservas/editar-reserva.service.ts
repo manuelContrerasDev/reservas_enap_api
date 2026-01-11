@@ -15,17 +15,13 @@ export const EditarReservaService = {
     const reserva = await prisma.reserva.findUnique({
       where: { id: reservaId },
       include: {
-        pago: {
-          select: { status: true },
-        },
+        pago: { select: { status: true } },
       },
     });
 
     if (!reserva) throw new Error("NOT_FOUND");
 
-    /* ============================================================
-     * ⛔ ESTADOS BLOQUEADOS
-     * ============================================================ */
+    /* ⛔ Estados bloqueados */
     const estadosBloqueados: ReservaEstado[] = [
       ReservaEstado.CANCELADA,
       ReservaEstado.RECHAZADA,
@@ -37,16 +33,12 @@ export const EditarReservaService = {
       throw new Error("RESERVA_NO_MODIFICABLE");
     }
 
-    /* ============================================================
-     * 💳 BLOQUEO POR PAGO APROBADO
-     * ============================================================ */
+    /* 💳 Pago aprobado bloquea edición */
     if (reserva.pago?.status === PaymentStatus.APPROVED) {
       throw new Error("PAGO_CONFIRMADO");
     }
 
-    /* ============================================================
-     * 📅 BLOQUEO POR FECHA (HOY O PASADO)
-     * ============================================================ */
+    /* 📅 No permitir editar desde el día del evento */
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
@@ -57,9 +49,7 @@ export const EditarReservaService = {
       throw new Error("NO_PERMITIDO_TIEMPO");
     }
 
-    /* ============================================================
-     * 🧠 NORMALIZACIÓN DE DATOS PERMITIDOS
-     * ============================================================ */
+    /* 🧠 Normalización defensiva */
     const updateData = {
       nombreSocio: data.nombreSocio,
       rutSocio: data.rutSocio,
@@ -67,7 +57,6 @@ export const EditarReservaService = {
       correoEnap: data.correoEnap,
       correoPersonal: data.correoPersonal ?? null,
 
-      // Responsable solo si socio NO está presente
       nombreResponsable: data.socioPresente ? null : data.nombreResponsable ?? null,
       rutResponsable: data.socioPresente ? null : data.rutResponsable ?? null,
       emailResponsable: data.socioPresente ? null : data.emailResponsable ?? null,
@@ -76,24 +65,24 @@ export const EditarReservaService = {
         : data.telefonoResponsable ?? null,
     };
 
-    // Limpieza defensiva
     Object.keys(updateData).forEach((k) => {
       if (updateData[k as keyof typeof updateData] === undefined) {
         delete updateData[k as keyof typeof updateData];
       }
     });
 
-    /* ============================================================
-     * 📝 UPDATE CONTROLADO
-     * ============================================================ */
+    /* 📝 Update con INCLUDE para DTO */
     const actualizada = await prisma.reserva.update({
       where: { id: reservaId },
       data: updateData,
+      include: {
+        espacio: true,
+        invitados: true,
+        pago: true,
+      },
     });
 
-    /* ============================================================
-     * 📜 AUDIT LOG (NO BLOQUEANTE)
-     * ============================================================ */
+    /* 📜 AuditLog */
     prisma.auditLog
       .create({
         data: {

@@ -1,9 +1,6 @@
 import { prisma } from "../../lib/db";
 import { Prisma, ReservaEstado } from "@prisma/client";
 
-/* ============================================================
- * INCLUDE ADMIN CENTRALIZADO
- * ============================================================ */
 const adminInclude = {
   espacio: {
     select: {
@@ -75,8 +72,9 @@ export const ReservasAdminRepository = {
       where: { id },
       data: {
         estado,
-        cancelledAt: estado === ReservaEstado.CANCELADA ? new Date() : null,
-        cancelledBy: estado === ReservaEstado.CANCELADA ? "ADMIN" : null,
+        ...(estado === ReservaEstado.CANCELADA
+          ? { cancelledAt: new Date(), cancelledBy: "ADMIN" }
+          : {}),
       },
       include: adminInclude,
     });

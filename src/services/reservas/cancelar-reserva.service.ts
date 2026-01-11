@@ -1,84 +1,44 @@
-// ============================================================
-// cancelar-reserva.service.ts — ENAP 2025 (PRODUCTION READY)
-// ============================================================
-
-import { prisma } from "../../lib/db";
+// src/services/reservas/cancelar-reserva.service.ts
 import { ReservaEstado } from "@prisma/client";
 import type { AuthUser } from "../../types/global";
+import { ReservasCancelarRepository } from "../../repositories/reservas/cancelar.repository";
+import { prisma } from "../../lib/db";
+
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
 
 export const CancelarReservaService = {
-  async ejecutar(reservaId: string, user: AuthUser) {
-    if (!user) throw new Error("NO_AUTH");
+  async ejecutar(reservaId: string, user: AuthUser, motivo?: string) {
+    if (!user?.id) throw new Error("NO_AUTH");
 
-    /* --------------------------------------------------------
-     * 1) Obtener reserva (ligero)
-     * -------------------------------------------------------- */
-    const reserva = await prisma.reserva.findUnique({
-      where: { id: reservaId },
-      select: {
-        id: true,
-        userId: true,
-        estado: true,
-        fechaInicio: true,
-      },
-    });
-
+    const reserva = await ReservasCancelarRepository.obtenerLigera(reservaId);
     if (!reserva) throw new Error("NOT_FOUND");
 
-    /* --------------------------------------------------------
-     * 2) Solo el dueño puede cancelar
-     * -------------------------------------------------------- */
     if (reserva.userId !== user.id) {
       throw new Error("NO_PERMITIDO");
     }
 
-    /* --------------------------------------------------------
-     * 3) Estados NO cancelables por usuario
-     * -------------------------------------------------------- */
-    const estadosNoCancelables: ReservaEstado[] = [
-      ReservaEstado.CANCELADA,
-      ReservaEstado.FINALIZADA,
-      ReservaEstado.RECHAZADA,
-      ReservaEstado.CADUCADA,
-    ];
-
-    if (estadosNoCancelables.includes(reserva.estado)) {
+    // ✅ Regla de negocio: SOLO si está PENDIENTE_PAGO
+    if (reserva.estado !== ReservaEstado.PENDIENTE_PAGO) {
       throw new Error("RESERVA_NO_CANCELABLE");
     }
 
-    // Usuario NO puede cancelar una reserva ya pagada
-    if (reserva.estado === ReservaEstado.CONFIRMADA) {
-      throw new Error("RESERVA_CONFIRMADA_NO_CANCELABLE");
+    // ✅ Regla temporal: nunca cancelar el mismo día o después
+    const hoy = startOfDay(new Date());
+    const inicio = startOfDay(new Date(reserva.fechaInicio));
+    if (hoy >= inicio) throw new Error("NO_PERMITIDO_TIEMPO");
+
+    // ✅ Regla 24h: si existe expiresAt (tu modelo lo tiene)
+    if (reserva.expiresAt && new Date() >= new Date(reserva.expiresAt)) {
+      throw new Error("RESERVA_CADUCADA");
     }
 
-    /* --------------------------------------------------------
-     * 4) Regla temporal: no cancelar el mismo día
-     * -------------------------------------------------------- */
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    const reservaActualizada = await ReservasCancelarRepository.cancelarPorUsuario(reservaId);
 
-    const inicio = new Date(reserva.fechaInicio);
-    inicio.setHours(0, 0, 0, 0);
-
-    if (hoy >= inicio) {
-      throw new Error("NO_PERMITIDO_TIEMPO");
-    }
-
-    /* --------------------------------------------------------
-     * 5) Cancelar reserva
-     * -------------------------------------------------------- */
-    const reservaActualizada = await prisma.reserva.update({
-      where: { id: reservaId },
-      data: {
-        estado: ReservaEstado.CANCELADA,
-        cancelledAt: new Date(),
-        cancelledBy: "USER",
-      },
-    });
-
-    /* --------------------------------------------------------
-     * 6) AuditLog (no bloqueante)
-     * -------------------------------------------------------- */
+    // AuditLog no bloqueante (incluye motivo si llega)
     prisma.auditLog
       .create({
         data: {
@@ -89,6 +49,8 @@ export const CancelarReservaService = {
           details: {
             estadoAnterior: reserva.estado,
             nuevoEstado: "CANCELADA",
+            motivo: motivo ?? null,
+            expiresAt: reserva.expiresAt ?? null,
           },
         },
       })

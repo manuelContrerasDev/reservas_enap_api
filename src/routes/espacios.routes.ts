@@ -9,20 +9,23 @@ import { validate } from "../middlewares/validate";
 import { validateQuery } from "../middlewares/validateQuery";
 import { validateParams } from "../middlewares/validateParams";
 
-// ⬅️ NUEVOS SCHEMAS
 import {
   crearEspacioSchema,
   actualizarEspacioSchema,
   catalogoQuerySchema,
   espacioIdSchema,
   toggleEspacioSchema,
+
+  // ✅ nuevos
+  tipoEspacioSchema,
+  disponibilidadRangoSchema,
 } from "../validators/espacios";
 
 const router = Router();
 
 /* ============================================================
- * 🛠 ADMIN — LISTAR ESPACIOS (DEBE IR ANTES DE /:id)
- * ============================================================*/
+ * 🛠 ADMIN — LISTAR ESPACIOS
+ * ============================================================ */
 router.get(
   "/admin",
   authGuard,
@@ -31,8 +34,27 @@ router.get(
 );
 
 /* ============================================================
- * 📌 CATÁLOGO PÚBLICO
- * ============================================================*/
+ * 🧩 CATÁLOGO AGRUPADO (PRODUCTOS) — NUEVO
+ * ============================================================ */
+router.get(
+  "/productos",
+  asyncHandler(EspaciosController.catalogoProductos)
+);
+
+/* ============================================================
+ * 📅 DISPONIBILIDAD POR PRODUCTO (AGRUPADO) — NUEVO
+ * /productos/:tipo/disponibilidad?fechaInicio&fechaFin
+ * ============================================================ */
+router.get(
+  "/productos/:tipo/disponibilidad",
+  validateParams(tipoEspacioSchema),
+  validateQuery(disponibilidadRangoSchema),
+  asyncHandler(EspaciosController.catalogoProductosDisponibilidad)
+);
+
+/* ============================================================
+ * 📌 CATÁLOGO PÚBLICO (LEGACY / POR UNIDAD)
+ * ============================================================ */
 router.get(
   "/",
   validateQuery(catalogoQuerySchema),
@@ -40,8 +62,8 @@ router.get(
 );
 
 /* ============================================================
- * 📅 DISPONIBILIDAD
- * ============================================================*/
+ * 📅 DISPONIBILIDAD POR UNIDAD (LEGACY)
+ * ============================================================ */
 router.get(
   "/:id/disponibilidad",
   validateParams(espacioIdSchema),
@@ -49,8 +71,8 @@ router.get(
 );
 
 /* ============================================================
- * 📄 DETALLE
- * ============================================================*/
+ * 📄 DETALLE INDIVIDUAL (LEGACY)
+ * ============================================================ */
 router.get(
   "/:id",
   validateParams(espacioIdSchema),
@@ -58,8 +80,8 @@ router.get(
 );
 
 /* ============================================================
- * 🛠 ADMIN — CREAR ESPACIO
- * ============================================================*/
+ * 🛠 ADMIN — CREAR
+ * ============================================================ */
 router.post(
   "/",
   authGuard,
@@ -70,7 +92,7 @@ router.post(
 
 /* ============================================================
  * 🛠 ADMIN — ACTUALIZAR
- * ============================================================*/
+ * ============================================================ */
 router.put(
   "/:id",
   authGuard,
@@ -81,8 +103,8 @@ router.put(
 );
 
 /* ============================================================
- * ❗ ADMIN — ELIMINACIÓN REAL
- * ============================================================*/
+ * ❗ ADMIN — ELIMINAR
+ * ============================================================ */
 router.delete(
   "/:id",
   authGuard,
@@ -92,8 +114,8 @@ router.delete(
 );
 
 /* ============================================================
- * 🔄 ADMIN — TOGGLE ACTIVO (SOFT)
- * ============================================================*/
+ * 🔄 ADMIN — TOGGLE ACTIVO
+ * ============================================================ */
 router.patch(
   "/:id/toggle",
   authGuard,

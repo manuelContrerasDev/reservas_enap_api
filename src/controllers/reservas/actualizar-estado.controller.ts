@@ -1,9 +1,6 @@
-// ============================================================
-// actualizar-estado.controller.ts — ENAP 2025 (PRODUCTION READY)
-// ============================================================
-
 import { Response } from "express";
 import type { AuthRequest } from "../../types/global";
+import { ZodError } from "zod";
 
 import { ActualizarEstadoReservaService } from "../../services/reservas";
 import { reservaToDTO } from "./utils/reservaToDTO";
@@ -11,38 +8,48 @@ import { actualizarEstadoSchema } from "../../validators/reservas";
 
 export const actualizarEstado = async (req: AuthRequest, res: Response) => {
   try {
-    // 🔐 Auth + ADMIN garantizados por router
-    const admin = req.user!;
+    // 🔐 auth + rol ADMIN garantizados por router (roleGuard), pero igual defensivo
+    if (!req.user) {
+      return res.status(401).json({ ok: false, error: "NO_AUTH" });
+    }
+
     const reservaId = req.params.id;
 
+    // Nota: si ya usas validate(actualizarEstadoSchema) en router,
+    // esto podría omitirse. Lo dejamos para “verdad absoluta”.
     const payload = actualizarEstadoSchema.parse(req.body);
 
     const reserva = await ActualizarEstadoReservaService.ejecutar(
       reservaId,
       payload.estado,
-      admin
+      req.user
     );
 
     return res.json({
       ok: true,
       data: reservaToDTO(reserva),
     });
-
   } catch (error: any) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        ok: false,
+        error: "VALIDATION_ERROR",
+        issues: error.issues,
+      });
+    }
+
     const message = error?.message ?? "ERROR_ACTUALIZAR_ESTADO";
 
-    console.error("❌ [actualizar estado reserva]:", message);
-
     const statusMap: Record<string, number> = {
-      NOT_FOUND: 404,
+      NO_AUTH: 401,
       NO_AUTORIZADO_ADMIN: 403,
+
       ESTADO_REQUERIDO: 400,
       ESTADO_INVALIDO: 400,
+
+      NOT_FOUND: 404,
+
       TRANSICION_INVALIDA: 409,
-      RESERVA_FINALIZADA_NO_MODIFICABLE: 409,
-      RESERVA_CANCELADA_NO_MODIFICABLE: 409,
-      RESERVA_RECHAZADA_SOLO_PUEDE_IR_A_PENDIENTE: 409,
-      CONFIRMADA_SOLO_PUEDE_FINALIZARSE: 409,
     };
 
     return res.status(statusMap[message] ?? 500).json({

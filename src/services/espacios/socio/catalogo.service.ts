@@ -1,33 +1,37 @@
-// src/services/espacios/socio/catalogo.service.ts
-
-import { EspaciosRepository } from "../../../repositories/espacios.repository";
-import { toEspacioDTO } from "../helpers";
 import { Prisma, TipoEspacio } from "@prisma/client";
+import { toEspacioDTO } from "../helpers";
+import {
+  obtenerEspaciosActivosService,
+} from "@/services/espacios/base/obtener-espacios-activos.service";
 
-export async function catalogoService(query: any) {
-  const q = query ?? {};
+interface CatalogoQuery {
+  search?: string;
+  tipo?: TipoEspacio;
+  capacidadMin?: string | number;
+  capacidadMax?: string | number;
+  order?: "asc" | "desc";
+}
 
-  const search = typeof q.search === "string" ? q.search.trim() : undefined;
+export async function catalogoService(query: CatalogoQuery = {}) {
+  const search =
+    typeof query.search === "string" ? query.search.trim() : undefined;
 
   const tipo =
-    q.tipo && Object.values(TipoEspacio).includes(q.tipo as TipoEspacio)
-      ? (q.tipo as TipoEspacio)
+    query.tipo && Object.values(TipoEspacio).includes(query.tipo)
+      ? query.tipo
       : undefined;
 
   const capacidadMin =
-    q.capacidadMin !== undefined ? Number(q.capacidadMin) : undefined;
+    query.capacidadMin !== undefined
+      ? Number(query.capacidadMin)
+      : undefined;
 
   const capacidadMax =
-    q.capacidadMax !== undefined ? Number(q.capacidadMax) : undefined;
-
-  const orderBy: Prisma.EspacioOrderByWithRelationInput = {
-    nombre: q.order === "desc" ? "desc" : "asc",
-  };
+    query.capacidadMax !== undefined
+      ? Number(query.capacidadMax)
+      : undefined;
 
   const where: Prisma.EspacioWhereInput = {
-    activo: true,
-    visible: true,
-
     ...(tipo ? { tipo } : {}),
 
     ...(search
@@ -39,17 +43,22 @@ export async function catalogoService(query: any) {
         }
       : {}),
 
-    ...(capacidadMin || capacidadMax
+    ...(capacidadMin !== undefined || capacidadMax !== undefined
       ? {
           capacidad: {
-            ...(capacidadMin ? { gte: capacidadMin } : {}),
-            ...(capacidadMax ? { lte: capacidadMax } : {}),
+            ...(capacidadMin !== undefined ? { gte: capacidadMin } : {}),
+            ...(capacidadMax !== undefined ? { lte: capacidadMax } : {}),
           },
         }
       : {}),
   };
 
-  const espacios = await EspaciosRepository.findMany(where, orderBy);
+  const espacios = await obtenerEspaciosActivosService({
+    where,
+    orderBy: {
+      nombre: query.order === "desc" ? "desc" : "asc",
+    },
+  });
 
   return espacios.map(toEspacioDTO);
 }

@@ -1,6 +1,6 @@
 // src/services/espacios/socio/detalle.service.ts
 
-import { EspaciosRepository } from "../../../repositories/espacios.repository";
+import { EspaciosRepository } from "../../../repositories/espacios/espacios.repository";
 import { toEspacioDTO } from "../helpers";
 
 export async function detalleService(id: string) {

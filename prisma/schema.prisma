@@ -138,6 +138,17 @@ model Reserva {
   cancelledAt DateTime?
   cancelledBy String? // USER | ADMIN | SYSTEM
 
+  // ============================================================
+  // ✅ PAGO MANUAL (SIMPLIFICADO) — Comprobante + Confirmación
+  // ============================================================
+  comprobanteUrl   String?
+  comprobanteName  String?
+  comprobanteMime  String?
+  comprobanteSize  Int?
+
+  confirmedAt DateTime?
+  confirmedBy String? // adminId que confirmó (NO relation para no amarrar)
+
   terminosAceptados Boolean @default(false)
   terminosVersion   String?
 
@@ -157,7 +168,11 @@ model Reserva {
   @@index([fechaInicio, fechaFin])
   @@index([espacioId, fechaInicio, fechaFin])
   @@index([userId, createdAt])
+
+  // Opcional (recomendado): acelera tablero admin “pendientes”
+  @@index([estado, expiresAt])
 }
+
 
 model Invitado {
   id        String  @id @default(uuid())

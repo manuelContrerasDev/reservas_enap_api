@@ -1,24 +1,20 @@
-// ============================================================
-// src/repositories/reservas/read.repository.ts
-// ENAP 2025 — PRODUCTION READY
-// ============================================================
-
 import { prisma } from "../../lib/db";
 import { ReservaEstado } from "@prisma/client";
 
-export const ReservasReadRepository = {
+type MisReservasPaginadasOpts = {
+  page: number;
+  limit: number;
+  estado?: ReservaEstado;
+};
 
+export const ReservasReadRepository = {
   /* ============================================================
-   * 👤 MIS RESERVAS (Usuario autenticado)
+   * 👤 MIS RESERVAS
    * ============================================================ */
   misReservas(userId: string) {
     return prisma.reserva.findMany({
       where: { userId },
-
-      orderBy: {
-        fechaInicio: "desc",
-      },
-
+      orderBy: { fechaInicio: "desc" },
       include: {
         espacio: {
           select: {
@@ -29,16 +25,15 @@ export const ReservasReadRepository = {
             imagenUrl: true,
           },
         },
-
         invitados: {
           select: {
             id: true,
             nombre: true,
             rut: true,
             edad: true,
+            esPiscina: true,
           },
         },
-
         pago: {
           select: {
             id: true,
@@ -52,12 +47,96 @@ export const ReservasReadRepository = {
   },
 
   /* ============================================================
-   * 📄 DETALLE RESERVA (full lectura)
+   * 👤 MIS RESERVAS POR ESTADO
+   * ============================================================ */
+  misReservasPorEstado(userId: string, estado: ReservaEstado) {
+    return prisma.reserva.findMany({
+      where: { userId, estado },
+      orderBy: { fechaInicio: "desc" },
+      include: {
+        espacio: {
+          select: {
+            id: true,
+            nombre: true,
+            tipo: true,
+            capacidad: true,
+            imagenUrl: true,
+          },
+        },
+        invitados: {
+          select: {
+            id: true,
+            nombre: true,
+            rut: true,
+            edad: true,
+            esPiscina: true,
+          },
+        },
+        pago: {
+          select: {
+            id: true,
+            status: true,
+            amountClp: true,
+            transactionDate: true,
+          },
+        },
+      },
+    });
+  },
+
+  /* ============================================================
+   * 👤 MIS RESERVAS PAGINADAS
+   * ============================================================ */
+  misReservasPaginadas(userId: string, opts: MisReservasPaginadasOpts) {
+    const page = Math.max(1, opts.page);
+    const limit = Math.max(1, Math.min(opts.limit, 50));
+    const skip = (page - 1) * limit;
+
+    return prisma.reserva.findMany({
+      where: {
+        userId,
+        ...(opts.estado ? { estado: opts.estado } : {}),
+      },
+      orderBy: { fechaInicio: "desc" },
+      skip,
+      take: limit,
+      include: {
+        espacio: {
+          select: {
+            id: true,
+            nombre: true,
+            tipo: true,
+            capacidad: true,
+            imagenUrl: true,
+          },
+        },
+        invitados: {
+          select: {
+            id: true,
+            nombre: true,
+            rut: true,
+            edad: true,
+            esPiscina: true,
+          },
+        },
+        pago: {
+          select: {
+            id: true,
+            status: true,
+            amountClp: true,
+            transactionDate: true,
+          },
+        },
+      },
+    });
+  },
+
+  /* ============================================================
+   * 📄 DETALLE RESERVA (USER / ADMIN)
    * ============================================================ */
   detalle(id: string) {
     return prisma.reserva.findUnique({
       where: { id },
-
       include: {
         espacio: {
           select: {
@@ -67,8 +146,6 @@ export const ReservasReadRepository = {
             descripcion: true,
             capacidad: true,
             imagenUrl: true,
-
-            // ✔ NOMBRES REALES DEL MODELO PRISMA
             precioBaseSocio: true,
             precioBaseExterno: true,
             precioPersonaAdicionalSocio: true,
@@ -77,16 +154,15 @@ export const ReservasReadRepository = {
             precioPiscinaExterno: true,
           },
         },
-
         invitados: {
           select: {
             id: true,
             nombre: true,
             rut: true,
             edad: true,
+            esPiscina: true,
           },
         },
-
         pago: true,
         user: {
           select: {
@@ -95,32 +171,6 @@ export const ReservasReadRepository = {
             email: true,
           },
         },
-      },
-    });
-  },
-
-  /* ============================================================
-   * 🟦 DISPONIBILIDAD PISCINA — Día completo (FIX TIMEZONE)
-   * ============================================================ */
-  piscinaPorFecha(fecha: Date) {
-    const inicioDia = new Date(fecha);
-    inicioDia.setHours(0, 0, 0, 0);
-
-    const finDia = new Date(fecha);
-    finDia.setHours(23, 59, 59, 999);
-
-    return prisma.reserva.findMany({
-      where: {
-        espacio: { tipo: "PISCINA" },
-        estado: { not: ReservaEstado.CANCELADA },
-        fechaInicio: {
-          gte: inicioDia,
-          lte: finDia,
-        },
-      },
-
-      select: {
-        cantidadPiscina: true,
       },
     });
   },

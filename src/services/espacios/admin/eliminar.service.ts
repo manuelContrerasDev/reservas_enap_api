@@ -1,6 +1,6 @@
 // src/services/espacios/admin/eliminar.service.ts
 
-import { EspaciosRepository } from "../../../repositories/espacios.repository";
+import { EspaciosRepository } from "../../../repositories/espacios/espacios.repository";
 import { toEspacioDTO } from "../helpers";
 
 /**

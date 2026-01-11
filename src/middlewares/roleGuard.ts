@@ -1,22 +1,27 @@
 import { Response, NextFunction } from "express";
-import type { AuthRequest, UserRole } from "../types/global";
+import type { AuthRequest } from "../types/global";
+import { Role } from "@prisma/client";
 
-export const roleGuard = (allowedRoles: UserRole[]) => {
+export const roleGuard = (allowedRoles: Role[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ ok: false, error: "No autenticado" });
-    }
-
-    const userRole = req.user.role;
-
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({
+      return res.status(401).json({
         ok: false,
-        error: "Acceso denegado",
-        details: { required: allowedRoles, current: userRole },
+        error: "NO_AUTH",
       });
     }
 
-    return next();
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        ok: false,
+        error: "FORBIDDEN",
+        details: {
+          required: allowedRoles,
+          current: req.user.role,
+        },
+      });
+    }
+
+    next();
   };
 };

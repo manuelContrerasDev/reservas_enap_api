@@ -1,11 +1,15 @@
 import { ReservaManualRequest } from "../validators/reservas/reservaManual.schema";
 
-export function mapReservaManualToCreateInput(
-  data: ReservaManualRequest
-) {
+/**
+ * ⚠️ Mapper:
+ * - Solo mapea campos “de dominio”
+ * - NO setea: estado, expiresAt, snapshots, totalClp (eso es del service)
+ */
+export function mapReservaManualToCreateInput(data: ReservaManualRequest) {
   return {
     userId: data.userId,
     espacioId: data.espacioId,
+
     fechaInicio: new Date(data.fechaInicio),
     fechaFin: new Date(data.fechaFin),
 

@@ -1,8 +1,7 @@
 // src/services/espacios/index.ts
-
 import { catalogoService } from "./socio/catalogo.service";
 import { detalleService } from "./socio/detalle.service";
-import { disponibilidadService } from "./socio/disponibilidad.service";
+import { DisponibilidadEspacioService } from "./socio/disponibilidad.service";
 
 import { crearService } from "./admin/crear.service";
 import { actualizarService } from "./admin/actualizar.service";
@@ -15,7 +14,7 @@ export const EspaciosService = {
   // SOCIO / EXTERNO
   catalogo: catalogoService,
   detalle: detalleService,
-  disponibilidad: disponibilidadService,
+  disponibilidadEspacio: DisponibilidadEspacioService,
 
   // ADMIN
   crear: crearService,

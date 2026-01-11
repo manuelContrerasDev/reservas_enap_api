@@ -1,9 +1,22 @@
+// src/services/reservas/mis-reservas.service.ts
 import { ReservasReadRepository } from "../../repositories/reservas";
 import type { AuthUser } from "../../types/global";
+import type { MisReservasQuery } from "../../validators/reservas/mis-reservas.schema";
 
 export const ReservasMiasService = {
-  async ejecutar(user: AuthUser) {
+  async ejecutar(user: AuthUser, query?: MisReservasQuery) {
     if (!user?.id) throw new Error("NO_AUTH");
-    return ReservasReadRepository.misReservas(user.id);
+
+    const page = query?.page ?? 1;
+    const limit = query?.limit ?? 10;
+    const estado = query?.estado;
+
+    // Si no hay estado => trae paginado sin filtro
+    if (!estado) {
+      return ReservasReadRepository.misReservasPaginadas(user.id, { page, limit });
+    }
+
+    // Con estado => trae paginado filtrado
+    return ReservasReadRepository.misReservasPaginadas(user.id, { page, limit, estado });
   },
 };

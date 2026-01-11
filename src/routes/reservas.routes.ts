@@ -51,10 +51,10 @@ router.get(
 
 /* ------------------------------------------------------------
  * LISTADO GENERAL (ADMIN)
- * GET /api/reservas
+ * GET /api/reservas/admin
  * ------------------------------------------------------------ */
 router.get(
-  "/",
+  "/admin",
   authGuard,
   roleGuard(["ADMIN"]),
   asyncHandler(ReservasController.obtenerReservasAdmin)
@@ -64,11 +64,12 @@ router.get(
  * DISPONIBILIDAD PISCINA
  * GET /api/reservas/piscina/disponibilidad
  * ------------------------------------------------------------ */
-  router.get(
-    "/piscina/disponibilidad",
-    validateQuery(piscinaFechaSchema),
-    asyncHandler(ReservasController.disponibilidadPiscina)
-  );
+router.get(
+  "/piscina/disponibilidad",
+  authGuard, // recomendado
+  validateQuery(piscinaFechaSchema),
+  asyncHandler(ReservasController.disponibilidadPiscina)
+);
 
 /* ------------------------------------------------------------
  * EDITAR RESERVA (ADMIN)
@@ -141,7 +142,7 @@ router.get(
   "/:id",
   authGuard,
   validateParams(idParamSchema),
-  asyncHandler(ReservasController.obtener)
+  asyncHandler(ReservasController.detalleReserva)
 );
 
 export default router;

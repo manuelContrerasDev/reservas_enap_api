@@ -1,28 +1,44 @@
+// src/controllers/espacios/disponibilidad.controller.ts
 import { Request, Response } from "express";
 import { EspaciosService } from "../../services/espacios";
-import { espacioIdSchema } from "../../validators/espacios";
+import {
+  espacioIdSchema,
+  disponibilidadRangoSchema,
+} from "../../validators/espacios";
 
 export const disponibilidad = async (req: Request, res: Response) => {
   try {
     const { id } = espacioIdSchema.parse(req.params);
+    const { fechaInicio, fechaFin } =
+      disponibilidadRangoSchema.parse(req.query);
 
-    const data = await EspaciosService.disponibilidad(id);
+    const data = await EspaciosService.disponibilidadEspacio.ejecutar(
+      id,
+      fechaInicio,
+      fechaFin
+    );
 
     return res.json({
       ok: true,
-      id,
-      fechas: data.fechas ?? [],
+      data,
     });
+
   } catch (error: any) {
-    if (error?.name === "ZodError") {
-      return res.status(400).json({ ok: false, error: "ID inválido", issues: error.issues });
-    }
+    const message = error?.message ?? "ERROR_DISPONIBILIDAD";
 
-    if (error?.message === "ESPACIO_NOT_FOUND") {
-      return res.status(404).json({ ok: false, error: "Espacio no encontrado" });
-    }
+    console.error("❌ [disponibilidad espacio]:", message);
 
-    console.error("❌ [disponibilidad] Error:", error);
-    return res.status(500).json({ ok: false, error: "Error al obtener disponibilidad" });
+    const status =
+      error?.name === "ZodError" ? 400 :
+      message === "ESPACIO_NO_DISPONIBLE" ? 404 :
+      message === "TIPO_NO_SOPORTADO" ? 400 :
+      message === "CAPACIDAD_NO_CONFIGURADA" ? 500 :
+      500;
+
+    return res.status(status).json({
+      ok: false,
+      error: message,
+      issues: error?.issues,
+    });
   }
 };

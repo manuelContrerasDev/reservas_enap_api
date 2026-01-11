@@ -1,8 +1,4 @@
-// ============================================================
-// admin-list.service.ts — ENAP 2025 (PRODUCTION READY)
-// ============================================================
-
-import { ReservaEstado, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { ReservasAdminRepository } from "../../repositories/reservas";
 import type { AdminReservasQuery } from "../../validators/reservas";
 
@@ -10,14 +6,14 @@ export const ReservasAdminListService = {
   async ejecutar(query: AdminReservasQuery) {
 
     /* --------------------------------------------------------
-     * 1) NORMALIZAR PAGINACIÓN
+     * 1) PAGINACIÓN (HTTP SAFE)
      * -------------------------------------------------------- */
-    const pageNum = Math.max(1, Number(query.page) || 1);
-    const limitNum = Math.max(1, Number(query.limit) || 20);
-    const skip = (pageNum - 1) * limitNum;
+    const page = Number(query.page) > 0 ? Number(query.page) : 1;
+    const limit = Number(query.limit) > 0 ? Number(query.limit) : 20;
+    const skip = (page - 1) * limit;
 
     /* --------------------------------------------------------
-     * 2) CONSTRUIR FILTROS
+     * 2) FILTROS
      * -------------------------------------------------------- */
     const filtros: Prisma.ReservaWhereInput = {};
 
@@ -52,21 +48,28 @@ export const ReservasAdminListService = {
       filtros.fechaInicio = {};
 
       if (query.fechaInicio) {
-        filtros.fechaInicio.gte = new Date(query.fechaInicio);
+        const ini = new Date(query.fechaInicio);
+        ini.setHours(0, 0, 0, 0);
+        filtros.fechaInicio.gte = ini;
       }
 
       if (query.fechaFin) {
-        filtros.fechaInicio.lte = new Date(query.fechaFin);
+        const fin = new Date(query.fechaFin);
+        fin.setHours(23, 59, 59, 999);
+        filtros.fechaInicio.lte = fin;
       }
     }
 
     /* --------------------------------------------------------
      * 3) ORDENAMIENTO
      * -------------------------------------------------------- */
-    const sort = query.sort ?? "fechaInicio";
+    const sortField: keyof Prisma.ReservaOrderByWithRelationInput =
+      query.sort ?? "fechaInicio";
+
+    const order: Prisma.SortOrder = query.order ?? "desc";
 
     const orderBy: Prisma.ReservaOrderByWithRelationInput = {
-      [sort]: query.order === "asc" ? "asc" : "desc",
+      [sortField]: order,
     };
 
     /* --------------------------------------------------------
@@ -74,24 +77,24 @@ export const ReservasAdminListService = {
      * -------------------------------------------------------- */
     const total = await ReservasAdminRepository.contar(filtros);
 
-    const reservas = await ReservasAdminRepository.listar(
+    const data = await ReservasAdminRepository.listar(
       filtros,
       skip,
-      limitNum,
+      limit,
       orderBy
     );
 
     /* --------------------------------------------------------
-     * 5) RETORNO
+     * 5) RESPONSE
      * -------------------------------------------------------- */
     return {
       meta: {
         total,
-        page: pageNum,
-        limit: limitNum,
-        pages: Math.max(1, Math.ceil(total / limitNum)),
+        page,
+        limit,
+        pages: Math.max(1, Math.ceil(total / limit)),
       },
-      data: reservas,
+      data,
     };
   },
 };

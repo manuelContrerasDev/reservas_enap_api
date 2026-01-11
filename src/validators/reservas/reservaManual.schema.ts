@@ -1,21 +1,34 @@
 import { z } from "zod";
+import { UsoReserva } from "@prisma/client";
+
+/* ===================== INVITADO ===================== */
+export const invitadoSchema = z.object({
+  nombre: z.string().trim().min(2),
+  rut: z.string().trim().min(3),
+  edad: z.coerce.number().int().min(0).nullable().optional(),
+  esPiscina: z.coerce.boolean().optional().default(false),
+}).strict();
 
 /* ===================== SOCIO ===================== */
-export const socioSchema = z.object({
-  nombre: z.string().min(1),
-  rut: z.string().min(1),
-  telefono: z.string().min(1),
-  correoEnap: z.string().email(),
-  correoPersonal: z.string().email().nullable().optional(),
-});
+export const socioSchema = z
+  .object({
+    nombre: z.string().trim().min(2),
+    rut: z.string().trim().min(3),
+    telefono: z.string().trim().min(8),
+    correoEnap: z.string().trim().toLowerCase().email(),
+    correoPersonal: z.string().trim().toLowerCase().email().nullable().optional(),
+  })
+  .strict();
 
 /* ================= RESPONSABLE =================== */
-export const responsableSchema = z.object({
-  nombre: z.string().min(1),
-  rut: z.string().min(1),
-  email: z.string().email(),
-  telefono: z.string().min(1),
-});
+export const responsableSchema = z
+  .object({
+    nombre: z.string().trim().min(2),
+    rut: z.string().trim().min(3),
+    email: z.string().trim().toLowerCase().email(),
+    telefono: z.string().trim().min(8),
+  })
+  .strict();
 
 /* ================= RESERVA (REQUEST) ============= */
 export const reservaManualRequestSchema = z
@@ -24,22 +37,31 @@ export const reservaManualRequestSchema = z
     creadaPor: z.string().uuid(),
     espacioId: z.string().uuid(),
 
-    fechaInicio: z.string(),
-    fechaFin: z.string(),
+    // Fechas (YYYY-MM-DD recomendado)
+    fechaInicio: z.string().trim().min(8),
+    fechaFin: z.string().trim().min(8),
 
+    // Cantidades (la reserva manual puede venir con conteo aunque falten datos)
     cantidadAdultos: z.coerce.number().int().min(1),
     cantidadNinos: z.coerce.number().int().min(0),
     cantidadPiscina: z.coerce.number().int().min(0),
 
-    usoReserva: z.enum(["USO_PERSONAL", "CARGA_DIRECTA", "TERCEROS"]),
-    marcarPagada: z.boolean().optional(),
+    usoReserva: z.nativeEnum(UsoReserva),
 
-    socioPresente: z.boolean(),
+    // Admin puede marcar pagada (opcional)
+    marcarPagada: z.coerce.boolean().optional().default(false),
+
+    socioPresente: z.coerce.boolean(),
 
     socio: socioSchema,
     responsable: responsableSchema.nullable().optional(),
+
+    // ✅ opcional: si el admin ya ingresó listado
+    invitados: z.array(invitadoSchema).optional(),
   })
+  .strict()
   .superRefine((data, ctx) => {
+    // Responsable según socioPresente
     if (!data.socioPresente && !data.responsable) {
       ctx.addIssue({
         path: ["responsable"],
@@ -57,7 +79,4 @@ export const reservaManualRequestSchema = z
     }
   });
 
-/* ================= TIPOS ========================= */
-export type ReservaManualRequest = z.infer<
-  typeof reservaManualRequestSchema
->;
+export type ReservaManualRequest = z.infer<typeof reservaManualRequestSchema>;
