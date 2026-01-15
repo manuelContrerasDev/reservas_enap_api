@@ -1,33 +1,36 @@
+// src/controllers/reservas/admin/search-users.controller.ts
+
 import { prisma } from "../../../lib/db";
-import { Request, Response } from "express";
+import type { Response } from "express";
+import type { AuthRequest } from "@/types/global";
 
-
-export const searchUsers = async (req: Request, res: Response) => {
+export const searchUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const q = (req.query.q as string)?.trim() ?? "";
-
-    if (!q) {
-      return res.json([]);
+    // 🔐 Seguridad
+    if (!req.user || req.user.role !== "ADMIN") {
+      return res.status(403).json({ error: "NO_AUTORIZADO_ADMIN" });
     }
 
-    // SOCIOS solamente
+    const q = (req.query.q as string)?.trim();
+
+    if (!q || q.length < 2) {
+      return res.json([]); // evita queries inútiles
+    }
+
     const socios = await prisma.user.findMany({
       where: {
         role: "SOCIO",
         OR: [
           { name: { contains: q, mode: "insensitive" } },
           { email: { contains: q, mode: "insensitive" } },
-          { email: { contains: q, mode: "insensitive" } },
-          { email: { contains: q, mode: "insensitive" } },
-          { email: { contains: q, mode: "insensitive" } },
-          // Si el rut lo guardas dentro de otra tabla o campo, me avisas.
+          { rut: { contains: q, mode: "insensitive" } }, // preparado
         ],
       },
       select: {
         id: true,
         name: true,
         email: true,
-        role: true,
+        rut: true,
       },
       take: 10,
       orderBy: {
@@ -35,9 +38,11 @@ export const searchUsers = async (req: Request, res: Response) => {
       },
     });
 
-    res.json(socios);
+    return res.json(socios);
   } catch (error) {
-    console.error("❌ Error buscando usuarios:", error);
-    res.status(500).json({ message: "Error interno al buscar usuarios." });
+    console.error("❌ Error buscando usuarios (ADMIN):", error);
+    return res
+      .status(500)
+      .json({ error: "ERROR_BUSCANDO_USUARIOS" });
   }
 };

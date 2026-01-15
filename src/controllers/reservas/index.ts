@@ -9,20 +9,18 @@ import { disponibilidadPiscina } from "./disponibilidad-piscina.controller";
 import { actualizarInvitados } from "./actualizar-invitados.controller";
 import { editarReserva } from "./editar-reserva.controller";
 
-import { obtenerReservasAdmin } from "./admin/admin-list.controller";
-import { eliminarReservaAdmin } from "./admin/hardDeleteReservaAdmin.controller";
-import { crearReservaManualAdmin } from "./admin/crear-manual.controller";
-
 export const ReservasController = {
-  crearReservaManualAdmin,
-  obtenerReservasAdmin,
-  eliminarReservaAdmin,
-  editarReserva,
+  // 👤 USER / SHARED
   crearReserva,
   misReservas,
+  cancelarReserva,
   detalleReserva,
+
+  // ⚠️ LEGACY / TRANSICIÓN
   actualizarEstado,
+
+  // 📦 OPERACIONES
   disponibilidadPiscina,
   actualizarInvitados,
-  cancelarReserva,
+  editarReserva,
 };

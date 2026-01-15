@@ -35,6 +35,7 @@ model User {
   reservasCreadas Reserva[] @relation("ReservasCreadasPorAdmin")
 
   auditLogs AuditLog[]
+  movimientosTesoreria MovimientoTesoreria[]
 
   @@index([role])
   @@index([emailDomain])
@@ -136,7 +137,7 @@ model Reserva {
 
   // Auditoría estado
   cancelledAt DateTime?
-  cancelledBy String? // USER | ADMIN | SYSTEM
+  cancelledBy CancelledBy?
 
   // ============================================================
   // ✅ PAGO MANUAL (SIMPLIFICADO) — Comprobante + Confirmación
@@ -161,6 +162,7 @@ model Reserva {
 
   invitados Invitado[]
   pago      Pago?
+  movimientosTesoreria MovimientoTesoreria[]
   espacio   Espacio @relation(fields: [espacioId], references: [id])
   user      User    @relation("ReservasPorUsuario", fields: [userId], references: [id])
 
@@ -183,6 +185,8 @@ model Invitado {
   esPiscina Boolean @default(false)
 
   reserva Reserva @relation(fields: [reservaId], references: [id])
+
+  @@index([reservaId])
 }
 
 // --------------------------------------
@@ -218,6 +222,32 @@ model Pago {
 }
 
 // --------------------------------------
+// MODULO TESORERIA (PAGOS VALIDADOS)
+// --------------------------------------
+model MovimientoTesoreria {
+  id          String     @id @default(uuid())
+
+  reservaId   String
+  reserva     Reserva    @relation(fields: [reservaId], references: [id], onDelete: Restrict)
+
+  montoClp    Int
+  metodo      MetodoPago @default(TRANSFERENCIA)
+
+  referencia  String?
+  nota        String?
+
+  creadoPorId String
+  creadoPor   User       @relation(fields: [creadoPorId], references: [id], onDelete: Restrict)
+
+  createdAt   DateTime   @default(now())
+
+  @@index([reservaId])
+  @@index([creadoPorId])
+  @@index([createdAt])
+}
+
+
+// --------------------------------------
 // MODULO LOGS
 // --------------------------------------
 
@@ -236,8 +266,9 @@ model AuditLog {
   // Relación
   user User? @relation(fields: [userId], references: [id])
 
-  @@index([userId])
-  @@index([entityId])
+  @@index([entity, createdAt])
+  @@index([action, createdAt])
+  @@index([userId, createdAt])
 }
 
 // --------------------------------------
@@ -283,4 +314,14 @@ enum PaymentStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+enum MetodoPago {
+  TRANSFERENCIA
+}
+
+enum CancelledBy {
+  USER
+  ADMIN
+  SYSTEM
 }

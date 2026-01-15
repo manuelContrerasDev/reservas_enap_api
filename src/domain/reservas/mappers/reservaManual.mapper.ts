@@ -1,13 +1,19 @@
-import { ReservaManualRequest } from "../validators/reservas/reservaManual.schema";
+// src/mappers/reservaManual.mapper.ts
+
+import type { ReservaManualRequest } from
+  "../../../validators/reservas/reservaManual.schema";
 
 /**
- * ⚠️ Mapper:
- * - Solo mapea campos “de dominio”
- * - NO setea: estado, expiresAt, snapshots, totalClp (eso es del service)
+ * Mapper puro de dominio
+ * ❌ No setea estado
+ * ❌ No setea userId
+ * ❌ No setea expiresAt
+ * ❌ No persiste tipoCliente (concepto UI)
  */
-export function mapReservaManualToCreateInput(data: ReservaManualRequest) {
+export function mapReservaManualToCreateInput(
+  data: ReservaManualRequest
+) {
   return {
-    userId: data.userId,
     espacioId: data.espacioId,
 
     fechaInicio: new Date(data.fechaInicio),
@@ -19,17 +25,21 @@ export function mapReservaManualToCreateInput(data: ReservaManualRequest) {
 
     usoReserva: data.usoReserva,
 
+    // ======================
+    // SOCIO
+    // ======================
     nombreSocio: data.socio.nombre,
     rutSocio: data.socio.rut,
     telefonoSocio: data.socio.telefono,
     correoEnap: data.socio.correoEnap,
     correoPersonal: data.socio.correoPersonal ?? null,
 
+    // ======================
+    // RESPONSABLE (opcional)
+    // ======================
     nombreResponsable: data.responsable?.nombre ?? null,
     rutResponsable: data.responsable?.rut ?? null,
     emailResponsable: data.responsable?.email ?? null,
     telefonoResponsable: data.responsable?.telefono ?? null,
-
-    creadaPor: data.creadaPor,
   };
 }

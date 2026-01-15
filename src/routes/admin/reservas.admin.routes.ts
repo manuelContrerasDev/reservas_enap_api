@@ -1,8 +1,9 @@
+// src/routes/admin/reservas.admin.routes.ts
 import { Router } from "express";
 import { Role } from "@prisma/client";
 
 import { ReservasAdminController } from "../../controllers/reservas/admin";
-import { cancelarReservaAdmin } from "../../controllers/reservas/admin/cancelar-admin.controller";
+import { subirComprobante } from "../../controllers/reservas/subirComprobante.controller";
 
 import { authGuard } from "../../middlewares/authGuard";
 import { roleGuard } from "../../middlewares/roleGuard";
@@ -12,13 +13,24 @@ import { validate } from "../../middlewares/validate";
 
 import { idParamSchema } from "../../validators/common/id-param.schema";
 import { cancelarReservaAdminSchema } from "../../validators/reservas/cancelar-reserva-admin.schema";
+import { agregarInvitadosAdmin } from "../../controllers/reservas/admin/agregar-invitados.controller";
+
 
 const router = Router();
 
-/**
- * 🚨 SOLO ADMIN puede crear reservas manuales
- * POST /api/admin/reservas/crear
- */
+/* ============================================================
+ * 📋 LISTADO ADMIN
+ * ============================================================ */
+router.get(
+  "/",
+  authGuard,
+  roleGuard([Role.ADMIN]),
+  asyncHandler(ReservasAdminController.obtenerReservasAdmin)
+);
+
+/* ============================================================
+ * ✏️ CREAR RESERVA MANUAL
+ * ============================================================ */
 router.post(
   "/crear",
   authGuard,
@@ -26,19 +38,56 @@ router.post(
   asyncHandler(ReservasAdminController.crearReservaManualAdmin)
 );
 
-/**
- * 🚫 Cancelar reserva (ADMIN)
- * PATCH /api/admin/reservas/:id/cancelar
- * - Solo cancela PENDIENTE_PAGO
- * - motivo opcional
- */
+/* ============================================================
+ * 📎 SUBIR COMPROBANTE
+ * ============================================================ */
+router.patch(
+  "/:id/comprobante",
+  authGuard,
+  roleGuard([Role.ADMIN]),
+  validateParams(idParamSchema),
+  asyncHandler(subirComprobante)
+);
+
+/* ============================================================
+ * 💰 CONFIRMAR / RECHAZAR / CANCELAR
+ * ============================================================ */
+router.patch(
+  "/:id/confirmar",
+  authGuard,
+  roleGuard([Role.ADMIN]),
+  validateParams(idParamSchema),
+  asyncHandler(ReservasAdminController.aprobarPagoAdmin)
+);
+
+router.patch(
+  "/:id/rechazar",
+  authGuard,
+  roleGuard([Role.ADMIN]),
+  validateParams(idParamSchema),
+  asyncHandler(ReservasAdminController.rechazarPagoAdmin)
+);
+
 router.patch(
   "/:id/cancelar",
   authGuard,
   roleGuard([Role.ADMIN]),
   validateParams(idParamSchema),
   validate(cancelarReservaAdminSchema),
-  asyncHandler(cancelarReservaAdmin)
+  asyncHandler(ReservasAdminController.cancelarReservaAdmin)
 );
+
+/* ============================================================
+ * 👥 INVITADOS (ADMIN · RESERVA MANUAL)
+ * ============================================================ */
+router.post(
+  "/:id/invitados",
+  authGuard,
+  roleGuard([Role.ADMIN]),
+  validateParams(idParamSchema),
+  asyncHandler(agregarInvitadosAdmin)
+);
+
+
 
 export default router;

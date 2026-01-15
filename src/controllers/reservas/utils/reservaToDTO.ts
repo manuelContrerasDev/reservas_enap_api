@@ -1,4 +1,5 @@
 // src/controllers/reservas/utils/reservaToDTO.ts
+
 export const reservaToDTO = (r: any) => ({
   id: r.id,
 
@@ -16,28 +17,39 @@ export const reservaToDTO = (r: any) => ({
         capacidad: null,
       },
 
-  fechaInicio: r.fechaInicio,
-  fechaFin: r.fechaFin,
+  fechaInicio: r.fechaInicio.toISOString(),
+  fechaFin: r.fechaFin.toISOString(),
   dias: r.dias,
 
   estado: r.estado,
   totalClp: r.totalClp,
 
-  // ✅ importantes para auditoría y UI
-  expiresAt: r.expiresAt ?? null,
-  cancelledAt: r.cancelledAt ?? null,
+  // ======================
+  // Auditoría / control
+  // ======================
+  expiresAt: r.expiresAt?.toISOString() ?? null,
+  cancelledAt: r.cancelledAt?.toISOString() ?? null,
   cancelledBy: r.cancelledBy ?? null,
 
+  // ======================
+  // Cantidades
+  // ======================
   cantidadAdultos: r.cantidadAdultos ?? 0,
   cantidadNinos: r.cantidadNinos ?? 0,
   cantidadPiscina: r.cantidadPiscina ?? 0,
 
+  // ======================
+  // Snapshot financiero
+  // ======================
   snapshot: {
     precioBase: r.precioBaseSnapshot ?? null,
     precioPersona: r.precioPersonaSnapshot ?? null,
     precioPiscina: r.precioPiscinaSnapshot ?? null,
   },
 
+  // ======================
+  // Socio
+  // ======================
   socio: {
     nombre: r.nombreSocio,
     rut: r.rutSocio,
@@ -48,15 +60,22 @@ export const reservaToDTO = (r: any) => ({
 
   usoReserva: r.usoReserva,
 
+  // ======================
+  // Responsable (solo si existe)
+  // ======================
   responsable:
-    r.usoReserva === "USO_PERSONAL"
-      ? null
-      : {
-          nombre: r.nombreResponsable ?? null,
-          rut: r.rutResponsable ?? null,
-          email: r.emailResponsable ?? null,
-        },
+    r.nombreResponsable
+      ? {
+          nombre: r.nombreResponsable,
+          rut: r.rutResponsable,
+          email: r.emailResponsable,
+          telefono: r.telefonoResponsable,
+        }
+      : null,
 
+  // ======================
+  // Invitados
+  // ======================
   invitados:
     r.invitados?.map((i: any) => ({
       id: i.id,
@@ -66,12 +85,16 @@ export const reservaToDTO = (r: any) => ({
       esPiscina: i.esPiscina ?? false,
     })) ?? [],
 
+  // ======================
+  // Pago (si existe)
+  // ======================
   pago: r.pago
     ? {
         id: r.pago.id,
         status: r.pago.status,
         amountClp: r.pago.amountClp,
-        transactionDate: r.pago.transactionDate ?? null,
+        transactionDate:
+          r.pago.transactionDate?.toISOString() ?? null,
       }
     : null,
 });

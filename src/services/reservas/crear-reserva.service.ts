@@ -5,7 +5,7 @@
 import { prisma } from "../../lib/db";
 import { ReservaEstado, Role, TipoEspacio } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
-import { calcularReserva } from "../../utils/calcularReserva";
+import { calcularReserva } from "../../domain/reservas/utils/calcularReserva";
 import { ReservasCreateRepository } from "../../repositories/reservas";
 import type { AuthUser } from "../../types/global";
 import type { CrearReservaType } from "../../validators/reservas";
@@ -105,8 +105,10 @@ export const CrearReservaService = {
         modalidadCobro: espacio.modalidadCobro,
         precioBaseSocio: espacio.precioBaseSocio,
         precioBaseExterno: espacio.precioBaseExterno,
-        precioPersonaSocio: espacio.precioPersonaAdicionalSocio,
-        precioPersonaExterno: espacio.precioPersonaAdicionalExterno,
+        precioPersonaAdicionalSocio:
+        espacio.precioPersonaAdicionalSocio,
+        precioPersonaAdicionalExterno:
+        espacio.precioPersonaAdicionalExterno,
         precioPiscinaSocio: espacio.precioPiscinaSocio,
         precioPiscinaExterno: espacio.precioPiscinaExterno,
       },

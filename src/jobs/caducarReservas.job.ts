@@ -4,7 +4,7 @@ import { CaducarReservasService } from "../services/reservas/caducar-reservas.se
 
 type StartCaducidadJobOptions = {
   enabled: boolean;
-  schedule: string; // cron string
+  schedule: string;
   batchSize: number;
 };
 
@@ -30,6 +30,13 @@ export function startCaducidadJob(opts: StartCaducidadJobOptions) {
           );
         } else {
           console.log("🕒 [caducidad] ok — sin reservas a caducar");
+        }
+
+        // 🧠 Defensa observabilidad (opcional)
+        if (res.scanned !== res.caducadas) {
+          console.warn(
+            `⚠️ [caducidad] mismatch scanned=${res.scanned} caducadas=${res.caducadas}`
+          );
         }
       } catch (e: any) {
         console.error("❌ [caducidad job] error:", e?.message ?? e);

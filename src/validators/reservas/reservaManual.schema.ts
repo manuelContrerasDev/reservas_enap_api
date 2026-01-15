@@ -1,26 +1,50 @@
+// ============================================================
+// reservaManual.schema.ts — Reserva Manual Admin (ENAP 2025)
+// BACKEND · CONTRATO OFICIAL
+// ============================================================
+
 import { z } from "zod";
 import { UsoReserva } from "@prisma/client";
 
-/* ===================== INVITADO ===================== */
-export const invitadoSchema = z.object({
-  nombre: z.string().trim().min(2),
-  rut: z.string().trim().min(3),
-  edad: z.coerce.number().int().min(0).nullable().optional(),
-  esPiscina: z.coerce.boolean().optional().default(false),
-}).strict();
+/* ============================================================
+ * ENUMS
+ * ============================================================ */
+export const TipoClienteEnum = z.enum(["SOCIO", "EXTERNO"]);
 
-/* ===================== SOCIO ===================== */
+/* ============================================================
+ * INVITADO
+ * ============================================================ */
+export const invitadoSchema = z
+  .object({
+    nombre: z.string().trim().min(2),
+    rut: z.string().trim().min(3),
+    edad: z.coerce.number().int().min(0).nullable().optional(),
+    esPiscina: z.coerce.boolean().optional().default(false),
+  })
+  .strict();
+
+/* ============================================================
+ * SOCIO
+ * ============================================================ */
 export const socioSchema = z
   .object({
     nombre: z.string().trim().min(2),
     rut: z.string().trim().min(3),
     telefono: z.string().trim().min(8),
     correoEnap: z.string().trim().toLowerCase().email(),
-    correoPersonal: z.string().trim().toLowerCase().email().nullable().optional(),
+    correoPersonal: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email()
+      .nullable()
+      .optional(),
   })
   .strict();
 
-/* ================= RESPONSABLE =================== */
+/* ============================================================
+ * RESPONSABLE
+ * ============================================================ */
 export const responsableSchema = z
   .object({
     nombre: z.string().trim().min(2),
@@ -30,38 +54,38 @@ export const responsableSchema = z
   })
   .strict();
 
-/* ================= RESERVA (REQUEST) ============= */
+/* ============================================================
+ * RESERVA MANUAL (ADMIN)
+ * ============================================================ */
 export const reservaManualRequestSchema = z
   .object({
-    userId: z.string().uuid(),
-    creadaPor: z.string().uuid(),
+    /* ================= FECHAS / ESPACIO ================= */
     espacioId: z.string().uuid(),
 
-    // Fechas (YYYY-MM-DD recomendado)
     fechaInicio: z.string().trim().min(8),
     fechaFin: z.string().trim().min(8),
 
-    // Cantidades (la reserva manual puede venir con conteo aunque falten datos)
+    /* ================= CANTIDADES ================= */
     cantidadAdultos: z.coerce.number().int().min(1),
     cantidadNinos: z.coerce.number().int().min(0),
     cantidadPiscina: z.coerce.number().int().min(0),
 
+    /* ================= USO / CLIENTE ================= */
     usoReserva: z.nativeEnum(UsoReserva),
-
-    // Admin puede marcar pagada (opcional)
-    marcarPagada: z.coerce.boolean().optional().default(false),
+    tipoCliente: TipoClienteEnum,
 
     socioPresente: z.coerce.boolean(),
 
+    /* ================= DATOS PERSONA ================= */
     socio: socioSchema,
     responsable: responsableSchema.nullable().optional(),
 
-    // ✅ opcional: si el admin ya ingresó listado
-    invitados: z.array(invitadoSchema).optional(),
+    /* ================= INVITADOS ================= */
+    invitados: z.array(invitadoSchema).optional().default([]),
   })
   .strict()
   .superRefine((data, ctx) => {
-    // Responsable según socioPresente
+    /* ================= REGLAS RESPONSABLE ================= */
     if (!data.socioPresente && !data.responsable) {
       ctx.addIssue({
         path: ["responsable"],
@@ -77,6 +101,23 @@ export const reservaManualRequestSchema = z
         message: "No debe haber responsable si el socio está presente",
       });
     }
+
+    /* ================= COHERENCIA INVITADOS ================= */
+    if (
+      data.invitados.length >
+      data.cantidadAdultos + data.cantidadNinos
+    ) {
+      ctx.addIssue({
+        path: ["invitados"],
+        code: z.ZodIssueCode.custom,
+        message: "Los invitados superan la cantidad total declarada",
+      });
+    }
   });
 
-export type ReservaManualRequest = z.infer<typeof reservaManualRequestSchema>;
+/* ============================================================
+ * TYPES
+ * ============================================================ */
+export type ReservaManualRequest = z.infer<
+  typeof reservaManualRequestSchema
+>;

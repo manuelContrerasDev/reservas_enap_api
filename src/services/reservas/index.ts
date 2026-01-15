@@ -1,6 +1,6 @@
 // ============================================================
 // RESERVAS SERVICES — ENAP 2025
-// Separados por rol y responsabilidad
+// Fuente única de exports
 // ============================================================
 
 /* ============================================================
@@ -20,8 +20,12 @@ export * from "./editar-reserva.service";
 export * from "./actualizar-estado.service";
 export * from "./actualizar-invitados.service";
 export * from "./cancelar-reserva-admin.service";
+export * from "./aprobar-pago.service";
+export * from "./rechazar-pago.service";
+export * from "./subir-comprobante.service";
 
 /* ============================================================
- * 🟦 DISPONIBILIDAD / SISTEMA
+ * 🟦 SISTEMA / CRON / DISPONIBILIDAD
  * ============================================================ */
+export * from "./caducar-reservas.service";
 export * from "./disponibilidad-piscina.service";

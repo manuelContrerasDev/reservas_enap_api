@@ -1,3 +1,5 @@
 declare module "express-xss-sanitizer" {
-  export function xss(): any;
+  import type { RequestHandler } from "express";
+
+  export function xss(): RequestHandler;
 }

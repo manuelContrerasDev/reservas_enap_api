@@ -1,6 +1,9 @@
+// src/services/reservas/caducar-reservas.service.ts
+
 import { prisma } from "../../lib/db";
 import { ReservaEstado } from "@prisma/client";
 import { ReservasCaducidadRepository } from "../../repositories/reservas/caducidad.repository";
+import { AUDIT_ACTIONS } from "@/constants/audit-actions";
 
 export type CaducarReservasResult = {
   scanned: number;
@@ -12,12 +15,12 @@ export const CaducarReservasService = {
   /**
    * Ejecuta la caducidad automática de reservas.
    *
-   * 🔹 Reglas ENAP 2025:
+   * 🔹 Reglas ENAP:
    * - SOLO reservas en estado PENDIENTE_PAGO
    * - expiresAt <= now
-   * - El módulo de pago está congelado → NO se valida pago
+   * - Flujo automático (CRON / SYSTEM)
    *
-   * Pensado para ejecutarse vía CRON.
+   * ❗ No valida pagos (módulo pago congelado)
    */
   async ejecutar(params?: {
     batchSize?: number;
@@ -27,7 +30,7 @@ export const CaducarReservasService = {
     const batchSize = params?.batchSize ?? 200;
 
     /* --------------------------------------------------------
-     * 1) Buscar reservas expiradas
+     * 1) Buscar reservas candidatas a caducar
      * -------------------------------------------------------- */
     const candidatas = await ReservasCaducidadRepository.findExpiradasIds({
       now,
@@ -37,15 +40,23 @@ export const CaducarReservasService = {
     const ids = candidatas.map((r) => r.id);
 
     if (ids.length === 0) {
-      return { scanned: 0, caducadas: 0, ids: [] };
+      return {
+        scanned: 0,
+        caducadas: 0,
+        ids: [],
+      };
     }
 
     /* --------------------------------------------------------
      * 2) Transacción: caducar + audit log
      * -------------------------------------------------------- */
     const caducadas = await prisma.$transaction(async (tx) => {
+      // 🔒 Defensa extra: evita caducar reservas ya mutadas
       const updated = await tx.reserva.updateMany({
-        where: { id: { in: ids } },
+        where: {
+          id: { in: ids },
+          estado: ReservaEstado.PENDIENTE_PAGO,
+        },
         data: {
           estado: ReservaEstado.CADUCADA,
           cancelledAt: now,
@@ -53,15 +64,18 @@ export const CaducarReservasService = {
         },
       });
 
+      // 🔐 Audit masivo (óptimo para CRON)
       await tx.auditLog.createMany({
         data: ids.map((id) => ({
-          action: "RESERVA_CADUCADA_AUTOMATICA",
-          entity: "Reserva",
+          action: AUDIT_ACTIONS.RESERVA_CADUCADA_AUTOMATICA,
+          entity: "RESERVA",
           entityId: id,
           userId: null,
           details: {
+            trigger: "CRON",
             reason: "EXPIRES_AT",
-            nuevoEstado: "CADUCADA",
+            from: ReservaEstado.PENDIENTE_PAGO,
+            to: ReservaEstado.CADUCADA,
           },
         })),
       });

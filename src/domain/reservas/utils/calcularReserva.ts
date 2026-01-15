@@ -1,8 +1,13 @@
 // ============================================================
-// calcularReserva.ts — Motor Oficial ENAP 2025 (Producción)
+// calcularReserva.ts — Motor Oficial ENAP 2025 (PRODUCCIÓN)
 // ============================================================
 
-import { ModalidadCobro, TipoEspacio, UsoReserva, Role } from "@prisma/client";
+import {
+  ModalidadCobro,
+  TipoEspacio,
+  UsoReserva,
+  Role,
+} from "@prisma/client";
 
 export interface CalculoReservaParams {
   espacio: {
@@ -26,7 +31,7 @@ export interface CalculoReservaParams {
   cantidadPiscina: number;
 
   usoReserva: UsoReserva;
-  role?: Role | null; // null = socio no registrado
+  role: Role; // 🔒 SIEMPRE definido
 }
 
 export function calcularReserva(params: CalculoReservaParams) {
@@ -40,35 +45,36 @@ export function calcularReserva(params: CalculoReservaParams) {
     role,
   } = params;
 
-  // ============================================================
-  // Normalizaciones básicas
-  // ============================================================
-
+  /* =========================================================
+   * Normalización
+   * ========================================================= */
   const diasEfectivos = Math.max(dias, 1);
   const totalPersonas = cantidadAdultos + cantidadNinos;
 
-  // ============================================================
-  // 1. Determinar tipo de tarifa
-  // ============================================================
+  if (totalPersonas < 1) {
+    throw new Error("SIN_PERSONAS");
+  }
 
-  const esExternoReal = role === Role.EXTERNO;
+  /* =========================================================
+   * Determinar tarifa real
+   * ========================================================= */
+  const esExterno = role === Role.EXTERNO;
 
   const pagaComoSocio =
-    !esExternoReal &&
+    !esExterno &&
     (usoReserva === UsoReserva.USO_PERSONAL ||
       usoReserva === UsoReserva.CARGA_DIRECTA);
 
   const pagaComoExterno =
-    esExternoReal || usoReserva === UsoReserva.TERCEROS;
+    esExterno || usoReserva === UsoReserva.TERCEROS;
 
   if (pagaComoSocio && pagaComoExterno) {
-    throw new Error("Regla inválida: conflicto SOCIO / EXTERNO");
+    throw new Error("REGLA_TARIFA_INVALIDA");
   }
 
-  // ============================================================
-  // 2. Selección de tarifas
-  // ============================================================
-
+  /* =========================================================
+   * Selección de tarifas
+   * ========================================================= */
   const precioBase = pagaComoSocio
     ? espacio.precioBaseSocio
     : espacio.precioBaseExterno;
@@ -81,10 +87,9 @@ export function calcularReserva(params: CalculoReservaParams) {
     ? espacio.precioPiscinaSocio
     : espacio.precioPiscinaExterno;
 
-  // ============================================================
-  // 3. Precio base (según modalidad)
-  // ============================================================
-
+  /* =========================================================
+   * Precio base
+   * ========================================================= */
   let precioBaseSnapshot = 0;
 
   if (
@@ -94,18 +99,15 @@ export function calcularReserva(params: CalculoReservaParams) {
     precioBaseSnapshot = precioBase * diasEfectivos;
   }
 
-  // POR_PERSONA → no hay base fija
+  /* =========================================================
+   * Personas adicionales (1 incluida)
+   * ========================================================= */
+  const personasAdicionales = Math.max(0, totalPersonas - 1);
+  const precioPersonaSnapshot = personasAdicionales * precioPersona;
 
-  // ============================================================
-  // 4. Precio por personas (TODAS pagan)
-  // ============================================================
-
-  const precioPersonaSnapshot = totalPersonas * precioPersona;
-
-  // ============================================================
-  // 5. Piscina
-  // ============================================================
-
+  /* =========================================================
+   * Piscina
+   * ========================================================= */
   let precioPiscinaSnapshot = 0;
 
   if (cantidadPiscina > 0) {
@@ -118,7 +120,7 @@ export function calcularReserva(params: CalculoReservaParams) {
       precioPiscinaSnapshot =
         cantidadPiscina * precioPiscina * diasEfectivos;
     } else {
-      // Piscina como extra de CABANA / QUINCHO
+      // Piscina como extra (cabaña / quincho)
       const personasPagadas = pagaComoSocio
         ? Math.max(cantidadPiscina - 5, 0) // 5 gratis socio
         : cantidadPiscina;
@@ -127,10 +129,9 @@ export function calcularReserva(params: CalculoReservaParams) {
     }
   }
 
-  // ============================================================
-  // 6. Total final
-  // ============================================================
-
+  /* =========================================================
+   * Total final
+   * ========================================================= */
   const totalClp =
     precioBaseSnapshot +
     precioPersonaSnapshot +

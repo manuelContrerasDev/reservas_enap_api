@@ -4,8 +4,11 @@ import "module-alias/register";
 import path from "path";
 import express, { Application } from "express";
 import morgan from "morgan";
-import { xss } from "express-xss-sanitizer";
 import swaggerUi from "swagger-ui-express";
+
+// express-xss-sanitizer es CommonJS puro
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const xss = require("express-xss-sanitizer");
 
 import { prisma } from "./lib/db";
 import { swaggerSpec } from "./docs/swagger";
@@ -24,10 +27,13 @@ import authRoutes from "./routes/auth.routes";
 import espaciosRoutes from "./routes/espacios.routes";
 import reservasRoutes from "./routes/reservas.routes";
 import pagosRoutes from "./routes/pagos.routes";
+// ✅ agrega este import junto a los otros
+import tesoreriaRoutes from "./routes/tesoreria.routes";
 
 // Admin
 import adminReservasRoutes from "./routes/admin/reservas.admin.routes";
 import adminUsersRoutes from "./routes/admin/users.admin.routes";
+
 
 const app: Application = express();
 
@@ -46,17 +52,16 @@ const appRootDir = process.cwd();
 /* ============================================================
  * Proxy / Seguridad base
  * ============================================================ */
-// En Render/Proxy: true. En local: false. Tu config ya estaba ok con "1".
+// En Render/Proxy: true. En local: false.
 app.set("trust proxy", NODE_ENV === "production" ? 1 : false);
 
 app.use(security.helmet);
 app.use(security.cors);
 
-// Sanitización XSS antes de parsear? ✅
-// (xss funciona sobre req.body, pero igual es válido aquí)
+// Sanitización XSS
 app.use(xss());
 
-// Body limit: 12kb ok
+// Body limit: 12kb
 app.use(express.json({ limit: "12kb" }));
 
 // Logger
@@ -94,6 +99,10 @@ app.use("/api/pagos", pagosRoutes);
 app.use("/api/admin/reservas", adminReservasRoutes);
 app.use("/api/admin/users", adminUsersRoutes);
 
+app.use("/api", tesoreriaRoutes);
+app.use("/api", tesoreriaRoutes);
+
+
 /* ============================================================
  * Health (Render friendly + DB check)
  * ============================================================ */
@@ -102,7 +111,9 @@ app.get("/health", async (_, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.status(200).json({ status: "ok", env: NODE_ENV });
   } catch {
-    res.status(500).json({ status: "error", db: "disconnected", env: NODE_ENV });
+    res
+      .status(500)
+      .json({ status: "error", db: "disconnected", env: NODE_ENV });
   }
 });
 
@@ -133,8 +144,6 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 Servidor TS (${NODE_ENV}) en puerto ${PORT}`);
 
   // ✅ JOB CADUCIDAD (PRO)
-  // Recomendación: en prod cada 5 minutos, batch 200.
-  // En dev: puedes habilitarlo si quieres probar (con ENABLE_CADUCIDAD_JOB=true).
   const caducidadEnabled =
     env.ENABLE_CADUCIDAD_JOB === "true" ||
     (NODE_ENV === "production" && env.ENABLE_CADUCIDAD_JOB !== "false");
@@ -168,19 +177,16 @@ const shutdown = async (reason: string, err?: unknown) => {
   if (err) console.error(`🧨 Shutdown por ${reason}:`, err);
   else console.log(`🧹 Cerrando servidor (${reason})...`);
 
-  // Hard exit fallback
   const forceExit = setTimeout(() => {
     console.error("⏱️ Force exit: shutdown timeout");
     process.exit(1);
   }, 8000);
   forceExit.unref();
 
-  // 1) Cerrar servidor HTTP primero (deja de aceptar requests)
   await new Promise<void>((resolve) => {
     server.close(() => resolve());
   });
 
-  // 2) Desconectar Prisma
   try {
     await prisma.$disconnect();
   } catch (e) {
@@ -192,5 +198,9 @@ const shutdown = async (reason: string, err?: unknown) => {
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("unhandledRejection", (err) => shutdown("unhandledRejection", err));
-process.on("uncaughtException", (err) => shutdown("uncaughtException", err));
+process.on("unhandledRejection", (err) =>
+  shutdown("unhandledRejection", err)
+);
+process.on("uncaughtException", (err) =>
+  shutdown("uncaughtException", err)
+);

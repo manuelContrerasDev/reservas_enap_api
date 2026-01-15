@@ -1,24 +1,47 @@
+// ============================================================
+// crearReservaManualAdmin.controller.ts — ENAP 2025 (PRO)
+// ============================================================
+
 import { Response } from "express";
 import type { AuthRequest } from "../../../types/global";
 import { Role } from "@prisma/client";
 
 import {
   reservaManualRequestSchema,
-  ReservaManualRequest,
+  type ReservaManualRequest,
 } from "../../../validators/reservas/reservaManual.schema";
 
 import { ReservaManualService } from "../../../services/reservas/reserva-manual.service";
 import { reservaToDTO } from "../../reservas/utils/reservaToDTO";
 
-export const crearReservaManualAdmin = async (req: AuthRequest, res: Response) => {
+export const crearReservaManualAdmin = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
-    if (!req.user || req.user.role !== Role.ADMIN) {
-      return res.status(403).json({ ok: false, error: "NO_AUTORIZADO_ADMIN" });
+    /* =========================================================
+     * Auth
+     * ========================================================= */
+    if (!req.user?.id) {
+      return res.status(403).json({
+        ok: false,
+        error: "ADMIN_ID_REQUERIDO",
+      });
     }
 
-    const payload: ReservaManualRequest = reservaManualRequestSchema.parse(req.body);
+    /* =========================================================
+     * Payload
+     * ========================================================= */
+    const payload: ReservaManualRequest =
+      reservaManualRequestSchema.parse(req.body);
 
-    const reserva = await ReservaManualService.crear(payload);
+    /* =========================================================
+     * Service
+     * ========================================================= */
+    const reserva = await ReservaManualService.crear(
+      payload,
+      req.user.id // adminId
+    );
 
     return res.status(201).json({
       ok: true,
@@ -26,25 +49,38 @@ export const crearReservaManualAdmin = async (req: AuthRequest, res: Response) =
     });
   } catch (error: any) {
     const message = error?.message ?? "ERROR_CREAR_RESERVA_MANUAL";
-    console.error("❌ [crear reserva manual]:", message);
+
+    // 🔍 log técnico (sin filtrar data sensible)
+    console.error("❌ [RESERVA_MANUAL_ADMIN]", {
+      adminId: req.user?.id,
+      espacioId: req.body?.espacioId,
+      error: message,
+    });
 
     const statusMap: Record<string, number> = {
+      // Auth
       NO_AUTORIZADO_ADMIN: 403,
-      USER_ID_REQUERIDO: 400,
-      ESPACIO_ID_REQUERIDO: 400,
-      ADMIN_ID_REQUERIDO: 400,
-      USER_NOT_FOUND: 404,
-      ESPACIO_NOT_FOUND: 404,
+      ADMIN_ID_REQUERIDO: 403,
+
+      // Sistema
+      SYSTEM_USER_NO_CONFIGURADO: 500,
+
+      // Datos
+      TIPO_CLIENTE_INVALIDO: 400,
+      DEBE_HABER_AL_MENOS_1_ADULTO: 400,
       FECHAS_INVALIDAS: 400,
       FECHA_FIN_INVALIDA: 400,
-      INICIO_LUNES_NO_PERMITIDO: 409,
       DIAS_INVALIDOS: 400,
+
+      // Reglas
+      INICIO_LUNES_NO_PERMITIDO: 409,
       CAPACIDAD_CABANA_SUPERADA: 409,
       CAPACIDAD_QUINCHO_SUPERADA: 409,
-      FECHAS_NO_DISPONIBLES: 409,
-      INVITADOS_INVALIDOS: 400,
       INVITADOS_SUPERAN_DECLARADO: 409,
-      ERROR_CREAR_RESERVA_MANUAL: 500,
+      FECHAS_NO_DISPONIBLES: 409,
+
+      // Recursos
+      ESPACIO_NOT_FOUND: 404,
     };
 
     return res.status(statusMap[message] ?? 500).json({
