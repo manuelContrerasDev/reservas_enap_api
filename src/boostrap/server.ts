@@ -1,14 +1,9 @@
-// src/server.ts
-import "module-alias/register";
+// src/boostrap/server.ts
 
 import path from "path";
 import express, { Application } from "express";
 import morgan from "morgan";
 import swaggerUi from "swagger-ui-express";
-
-// express-xss-sanitizer es CommonJS puro
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const xss = require("express-xss-sanitizer");
 
 import { prisma } from "@/lib/db";
 import { swaggerSpec } from "@/docs/swagger";
@@ -43,16 +38,12 @@ const appRootDir = process.cwd();
 /* ============================================================
  * Proxy / Seguridad base
  * ============================================================ */
-// En Render/Proxy: true. En local: false.
 app.set("trust proxy", NODE_ENV === "production" ? 1 : false);
 
 app.use(security.helmet);
 app.use(security.cors);
 
-// Sanitización XSS
-app.use(xss());
-
-// Body limit: 12kb
+// Body limit estricto (API)
 app.use(express.json({ limit: "12kb" }));
 
 // Logger
@@ -90,9 +81,8 @@ app.use("/api/pagos", pagosRoutes);
 app.use("/api/admin/reservas", adminReservasRoutes);
 app.use("/api/admin/users", adminUsersRoutes);
 
+// Tesorería
 app.use("/api", tesoreriaRoutes);
-app.use("/api", tesoreriaRoutes);
-
 
 /* ============================================================
  * Health (Render friendly + DB check)
@@ -134,7 +124,6 @@ app.use(errorHandler);
 const server = app.listen(PORT, () => {
   console.log(`🚀 Servidor TS (${NODE_ENV}) en puerto ${PORT}`);
 
-  // ✅ JOB CADUCIDAD (PRO)
   const caducidadEnabled =
     env.ENABLE_CADUCIDAD_JOB === "true" ||
     (NODE_ENV === "production" && env.ENABLE_CADUCIDAD_JOB !== "false");
@@ -145,19 +134,15 @@ const server = app.listen(PORT, () => {
     batchSize: Number(env.CADUCIDAD_BATCH_SIZE ?? 200),
   });
 
-  if (caducidadEnabled) {
-    console.log(
-      `🕒 CaducidadJob ON (cron=${env.CADUCIDAD_CRON ?? "*/5 * * * *"} batch=${
-        env.CADUCIDAD_BATCH_SIZE ?? 200
-      })`
-    );
-  } else {
-    console.log("🕒 CaducidadJob OFF");
-  }
+  console.log(
+    caducidadEnabled
+      ? `🕒 CaducidadJob ON (cron=${env.CADUCIDAD_CRON ?? "*/5 * * * *"})`
+      : "🕒 CaducidadJob OFF"
+  );
 });
 
 /* ============================================================
- * Shutdown PRO (anti-colgado)
+ * Shutdown PRO
  * ============================================================ */
 let isShuttingDown = false;
 
@@ -174,9 +159,7 @@ const shutdown = async (reason: string, err?: unknown) => {
   }, 8000);
   forceExit.unref();
 
-  await new Promise<void>((resolve) => {
-    server.close(() => resolve());
-  });
+  await new Promise<void>((resolve) => server.close(() => resolve()));
 
   try {
     await prisma.$disconnect();
