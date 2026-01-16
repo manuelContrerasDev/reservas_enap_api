@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/db";
 import type { AuthUser } from "../../../types/global";
 import type { MovimientoTesoreriaDTO } from "../../../types/tesoreria.dto";
 
-import { movimientoToDTO } from "../../../utils/tesoreria/movimientoToDTO";
+import { movimientoToDTO } from "../../../domains/tesoreria/mappers/movimientoToDTO";
 
 export interface FiltrosTesoreriaService {
   desde?: Date;

@@ -4,7 +4,7 @@
 // ============================================================
 
 import { Router } from "express";
-import { ReservasController } from "../controllers/reservas";
+import { ReservasController } from "../domains/reservas/controllers";
 
 import { authGuard } from "../middlewares/authGuard";
 import { roleGuard } from "../middlewares/roleGuard";
@@ -15,12 +15,12 @@ import { validateQuery } from "../middlewares/validateQuery";
 import { validateParams } from "../middlewares/validateParams";
 
 // Schemas
-import { crearReservaSchema } from "../validators/reservas/crear-reserva.schema";
-import { piscinaFechaSchema } from "../validators/reservas/piscina-fecha.schema";
-import { actualizarEstadoSchema } from "../validators/reservas/actualizar-estado-reserva.schema";
+import { crearReservaSchema } from "../domains/reservas/validators/crear-reserva.schema";
+import { piscinaFechaSchema } from "../domains/reservas/validators/piscina-fecha.schema";
+import { actualizarEstadoSchema } from "../domains/reservas/validators/actualizar-estado-reserva.schema";
 import { idParamSchema } from "../validators/common/id-param.schema";
-import { actualizarInvitadosSchema } from "../validators/reservas/actualizar-invitados.schema";
-import { editReservaSchema } from "../validators/reservas/edit-reserva.schema";
+import { actualizarInvitadosSchema } from "../domains/reservas/validators/actualizar-invitados.schema";
+import { editReservaSchema } from "../domains/reservas/validators/edit-reserva.schema";
 
 const router = Router();
 

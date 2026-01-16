@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { catalogoProductosService } from "../../services/espacios/socio/productos/catalogo-productos.service";
+import { catalogoProductosService } from "../../domains/espacios/services/publico/productos/catalogo-productos.service";
 
 export async function catalogoProductosController(
   _req: Request,

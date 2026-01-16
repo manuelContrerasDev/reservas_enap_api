@@ -2,8 +2,8 @@
 import { Router } from "express";
 import { Role } from "@prisma/client";
 
-import { ReservasAdminController } from "../../controllers/reservas/admin";
-import { subirComprobante } from "../../controllers/reservas/subirComprobante.controller";
+import { ReservasAdminController } from "../../domains/reservas/controllers/admin";
+import { subirComprobante } from "../../domains/reservas/controllers/subirComprobante.controller";
 
 import { authGuard } from "../../middlewares/authGuard";
 import { roleGuard } from "../../middlewares/roleGuard";
@@ -12,8 +12,8 @@ import { validateParams } from "../../middlewares/validateParams";
 import { validate } from "../../middlewares/validate";
 
 import { idParamSchema } from "../../validators/common/id-param.schema";
-import { cancelarReservaAdminSchema } from "../../validators/reservas/cancelar-reserva-admin.schema";
-import { agregarInvitadosAdmin } from "../../controllers/reservas/admin/agregar-invitados.controller";
+import { cancelarReservaAdminSchema } from "../../domains/reservas/validators/cancelar-reserva-admin.schema";
+import { agregarInvitadosAdmin } from "../../domains/reservas/controllers/admin/agregar-invitados.controller";
 
 
 const router = Router();

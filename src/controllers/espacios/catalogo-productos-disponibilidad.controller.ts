@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { TipoEspacio } from "@prisma/client";
-import { disponibilidadProductoService } from "@/services/espacios/socio/productos/disponibilidad-producto.service";
+import { disponibilidadProductoService } from "@/domains/espacios/services/publico/productos/disponibilidad-producto.service";
 
 export async function catalogoProductosDisponibilidadController(req: Request, res: Response) {
   const { tipo } = req.params;

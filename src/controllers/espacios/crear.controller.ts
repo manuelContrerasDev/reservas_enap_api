@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { EspaciosService } from "../../services/espacios";
+import { EspaciosService } from "../../domains/espacios/services";
 import { crearEspacioSchema } from "../../validators/espacios";
 
 export const crear = async (req: Request, res: Response) => {

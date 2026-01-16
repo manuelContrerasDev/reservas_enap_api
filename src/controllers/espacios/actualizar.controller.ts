@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { EspaciosService } from "../../services/espacios";
+import { EspaciosService } from "../../domains/espacios/services";
 import {
   actualizarEspacioSchema,
   espacioIdSchema,
