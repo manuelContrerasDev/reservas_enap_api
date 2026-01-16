@@ -1,7 +1,7 @@
 // src/controllers/tesoreria/admin/export-movimientos.controller.ts
 import type { AuthRequest } from "@/types/global";
 import { Response } from "express";
-import { exportMovimientosTesoreriaService } from "@/services/tesoreria/admin/export-movimientos.service";
+import { exportMovimientosTesoreriaService } from "@/domains/tesoreria/services/export-movimientos.service";
 
 function toCSV(rows: any[]) {
   const header = [

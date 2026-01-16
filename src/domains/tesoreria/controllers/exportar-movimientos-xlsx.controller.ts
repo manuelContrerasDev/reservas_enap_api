@@ -1,7 +1,7 @@
 // src/controllers/tesoreria/admin/exportar-movimientos-xlsx.controller.ts
 import { Response } from "express";
 import type { AuthRequest } from "@/types/global";
-import { exportarMovimientosXlsxService } from "@/services/tesoreria/admin/exportar-movimientos-xlsx.service";
+import { exportarMovimientosXlsxService } from "@/domains/tesoreria/services/exportar-movimientos-xlsx.service";
 
 function parseDateOnly(input?: string): Date | undefined {
   if (!input) return undefined;

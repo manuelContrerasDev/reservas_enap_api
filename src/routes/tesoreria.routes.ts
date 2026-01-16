@@ -5,9 +5,9 @@ import { Role } from "@prisma/client";
 import { authGuard } from "@/middlewares/authGuard";
 import { roleGuard } from "@/middlewares/roleGuard";
 
-import { listarMovimientosTesoreriaController } from "@/controllers/tesoreria/admin/listar-movimientos.controller";
-import { resumenTesoreriaController } from "@/controllers/tesoreria/admin/resumen-tesoreria.controller";
-import { exportarMovimientosXlsxController } from "@/controllers/tesoreria/admin/exportar-movimientos-xlsx.controller";
+import { listarMovimientosTesoreriaController } from "@/domains/tesoreria/controllers/listar-movimientos.controller";
+import { resumenTesoreriaController } from "@/domains/tesoreria/controllers/resumen-tesoreria.controller";
+import { exportarMovimientosXlsxController } from "@/domains/tesoreria/controllers/exportar-movimientos-xlsx.controller";
 
 const router = Router();
 

@@ -1,10 +1,12 @@
-// src/controllers/tesoreria/admin/resumen-tesoreria.controller.ts
-import type { AuthRequest } from "@/types/global";
+// src/controllers/tesoreria/admin/listar-movimientos.controller.ts
 import type { Response } from "express";
-import { resumenTesoreriaService } from "@/services/tesoreria/admin/resumen-tesoreria.service";
+import type { AuthRequest } from "../../../types/global";
+import { listarMovimientosTesoreriaService } from "../services/listar-movimientos.service";
 
 function parseDateOnly(value?: string): Date | undefined {
   if (!value) return undefined;
+
+  // Esperamos YYYY-MM-DD
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) {
     throw new Error("FECHA_INVALIDA");
@@ -12,7 +14,7 @@ function parseDateOnly(value?: string): Date | undefined {
   return d;
 }
 
-export async function resumenTesoreriaController(
+export async function listarMovimientosTesoreriaController(
   req: AuthRequest,
   res: Response
 ) {
@@ -22,22 +24,13 @@ export async function resumenTesoreriaController(
     }
 
     const desde = parseDateOnly(req.query.desde as string | undefined);
-    const hastaRaw = parseDateOnly(req.query.hasta as string | undefined);
+    const hasta = parseDateOnly(req.query.hasta as string | undefined);
 
-    if (desde && hastaRaw && desde.getTime() > hastaRaw.getTime()) {
+    if (desde && hasta && desde.getTime() > hasta.getTime()) {
       return res.status(400).json({ ok: false, error: "RANGO_INVALIDO" });
     }
 
-    // Normalizamos hasta fin del día
-    const hasta =
-      hastaRaw &&
-      (() => {
-        const d = new Date(hastaRaw);
-        d.setHours(23, 59, 59, 999);
-        return d;
-      })();
-
-    const data = await resumenTesoreriaService(req.user, {
+    const data = await listarMovimientosTesoreriaService(req.user, {
       desde,
       hasta,
     });
