@@ -1,7 +1,7 @@
 // src/services/espacios/admin/toggle-activo.service.ts
 
-import { EspaciosRepository } from "../../../repositories/espacios/espacios.repository";
-import { toEspacioDTO } from "../../../domains/espacios/mappers/espacioDTO";
+import { EspaciosRepository } from "@/domains/espacios/repositories/espacios.repository";
+import { toEspacioDTO } from "@/domains/espacios/mappers/espacioDTO";
 
 /**
  * Toggle activo (ADMIN)

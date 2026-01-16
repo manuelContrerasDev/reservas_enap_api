@@ -1,7 +1,7 @@
 // src/services/espacios/socio/detalle.service.ts
 
-import { EspaciosRepository } from "../../../repositories/espacios/espacios.repository";
-import { toEspacioDTO } from "../../mappers/espacioDTO";
+import { EspaciosRepository } from "@/domains/espacios/repositories/espacios.repository";
+import { toEspacioDTO } from "@/domains/espacios/mappers/espacioDTO";
 
 export async function detalleService(id: string) {
   const espacio = await EspaciosRepository.findPublicById(id);

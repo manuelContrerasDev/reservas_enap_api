@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { EspaciosService } from "../../domains/espacios/services";
-import { crearEspacioSchema } from "../../validators/espacios";
+import { EspaciosService } from "@/domains/espacios/services";
+import { crearEspacioSchema } from "@/domains/espacios/validators";
 
 export const crear = async (req: Request, res: Response) => {
   // 🔐 NOTA: este endpoint debe ser ADMIN only (ver routes / middleware)

@@ -1,6 +1,6 @@
 // src/services/espacios/base/obtener-espacios-activos.service.ts
 
-import { EspaciosRepository } from "@/repositories/espacios/espacios.repository";
+import { EspaciosRepository } from "@/domains/espacios/repositories/espacios.repository";
 import { Prisma, Espacio } from "@prisma/client";
 
 /* ============================================================

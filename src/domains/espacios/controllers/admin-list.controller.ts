@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { EspaciosService } from "../../domains/espacios/services";
+import { EspaciosService } from "@/domains/espacios/services";
 
 export const adminList = async (req: Request, res: Response) => {
   // 🔐 ADMIN only (middleware de rutas)

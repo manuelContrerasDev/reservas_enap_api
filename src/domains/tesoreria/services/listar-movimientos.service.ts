@@ -2,7 +2,7 @@
 
 import { prisma } from "../../../lib/db";
 import type { AuthUser } from "../../../types/global";
-import type { MovimientoTesoreriaDTO } from "../mappers/tesoreria.dto";
+import type { MovimientoTesoreriaDTO } from "../dto/tesoreriaDTO";
 
 import { movimientoToDTO } from "../mappers/movimientoToDTO";
 

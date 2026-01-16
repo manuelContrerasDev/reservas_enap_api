@@ -10,30 +10,21 @@ import swaggerUi from "swagger-ui-express";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const xss = require("express-xss-sanitizer");
 
-import { prisma } from "./lib/db";
-import { swaggerSpec } from "./docs/swagger";
+import { prisma } from "@/lib/db";
+import { swaggerSpec } from "@/docs/swagger";
+import { security } from "@/middlewares/security";
+import { apiLimiter } from "@/middlewares/rateLimit";
+import { errorHandler } from "@/middlewares/errorHandler";
+import { env, EMAIL_ENABLED, WEBPAY_ENABLED } from "@/config/env";
+import { startCaducidadJob } from "@/jobs/caducarReservas.job";
 
-import { security } from "./middlewares/security";
-import { apiLimiter } from "./middlewares/rateLimit";
-import { errorHandler } from "./middlewares/errorHandler";
-
-import { env, EMAIL_ENABLED, WEBPAY_ENABLED } from "./config/env";
-
-// ✅ JOB caducidad
-import { startCaducidadJob } from "./jobs/caducarReservas.job";
-
-// Rutas
-import authRoutes from "./routes/auth.routes";
-import espaciosRoutes from "./routes/espacios.routes";
-import reservasRoutes from "./routes/reservas.routes";
-import pagosRoutes from "./routes/pagos.routes";
-// ✅ agrega este import junto a los otros
-import tesoreriaRoutes from "./routes/tesoreria.routes";
-
-// Admin
-import adminReservasRoutes from "./routes/admin/reservas.admin.routes";
-import adminUsersRoutes from "./routes/admin/users.admin.routes";
-
+import authRoutes from "@/routes/auth.routes";
+import espaciosRoutes from "@/routes/espacios.routes";
+import reservasRoutes from "@/routes/reservas.routes";
+import pagosRoutes from "@/routes/pagos.routes";
+import tesoreriaRoutes from "@/routes/tesoreria.routes";
+import adminReservasRoutes from "@/routes/admin/reservas.admin.routes";
+import adminUsersRoutes from "@/routes/admin/users.admin.routes";
 
 const app: Application = express();
 

@@ -24,7 +24,7 @@ export const EspaciosController = {
   // Público (nuevo flujo profesional)
   catalogoProductos: catalogoProductosController,
   catalogoProductosDisponibilidad:
-    catalogoProductosDisponibilidadController,
+  catalogoProductosDisponibilidadController,
 
   // Admin
   crear,

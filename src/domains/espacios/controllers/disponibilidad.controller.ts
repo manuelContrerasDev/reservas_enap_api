@@ -1,10 +1,10 @@
 // src/controllers/espacios/disponibilidad.controller.ts
 import { Request, Response } from "express";
-import { EspaciosService } from "../../domains/espacios/services";
+import { EspaciosService } from "@/domains/espacios/services";
 import {
   espacioIdSchema,
   disponibilidadRangoSchema,
-} from "../../validators/espacios";
+} from "@/domains/espacios/validators/";
 
 export const disponibilidad = async (req: Request, res: Response) => {
   try {

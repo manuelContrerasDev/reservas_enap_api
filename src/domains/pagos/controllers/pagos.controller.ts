@@ -3,9 +3,9 @@
 // ============================================================
 
 import { Request, Response } from "express";
-import type { AuthRequest } from "../../types/global";
-import { PagosService } from "../../services/pagos/PagosService";
-import { prisma, } from "../../lib/db";
+import type { AuthRequest } from "@/types/global";
+import { PagosService } from "@/domains/pagos/services/PagosService";
+import { prisma, } from "@/lib/db";
 import { $Enums } from "@prisma/client";
 
 export const PagosController = {

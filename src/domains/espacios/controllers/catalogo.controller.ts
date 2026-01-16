@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { EspaciosService } from "../../domains/espacios/services";
-import { catalogoQuerySchema } from "../../validators/espacios";
+import { EspaciosService } from "@/domains/espacios/services";
+import { catalogoQuerySchema } from "@/domains/espacios/validators";
 
 export const catalogo = async (req: Request, res: Response) => {
   const parsed = catalogoQuerySchema.safeParse(req.query);

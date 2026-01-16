@@ -2,19 +2,18 @@
 import { Router } from "express";
 import { Role } from "@prisma/client";
 
-import { ReservasAdminController } from "../../domains/reservas/controllers/admin";
-import { subirComprobante } from "../../domains/reservas/controllers/subirComprobante.controller";
+import { ReservasAdminController } from "@/domains/reservas/controllers/admin";
+import { subirComprobante } from "@/domains/reservas/controllers/subirComprobante.controller";
+import { agregarInvitadosAdmin } from "@/domains/reservas/controllers/admin/agregar-invitados.controller";
 
-import { authGuard } from "../../middlewares/authGuard";
-import { roleGuard } from "../../middlewares/roleGuard";
-import { asyncHandler } from "../../middlewares/asyncHandler";
-import { validateParams } from "../../middlewares/validateParams";
-import { validate } from "../../middlewares/validate";
+import { authGuard } from "@/middlewares/authGuard";
+import { roleGuard } from "@/middlewares/roleGuard";
+import { asyncHandler } from "@/middlewares/asyncHandler";
+import { validateParams } from "@/middlewares/validateParams";
+import { validate } from "@/middlewares/validate";
 
-import { idParamSchema } from "../../validators/common/id-param.schema";
-import { cancelarReservaAdminSchema } from "../../domains/reservas/validators/cancelar-reserva-admin.schema";
-import { agregarInvitadosAdmin } from "../../domains/reservas/controllers/admin/agregar-invitados.controller";
-
+import { idParamSchema } from "@/shared/validators/common/id-param.schema";
+import { cancelarReservaAdminSchema } from "@/domains/reservas/validators/cancelar-reserva-admin.schema";
 
 const router = Router();
 
@@ -87,7 +86,5 @@ router.post(
   validateParams(idParamSchema),
   asyncHandler(agregarInvitadosAdmin)
 );
-
-
 
 export default router;

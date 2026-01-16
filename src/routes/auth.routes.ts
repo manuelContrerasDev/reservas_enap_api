@@ -1,10 +1,10 @@
 // src/routes/auth.routes.ts
 import { Router } from "express";
-import { AuthController } from "../domains/auth/controllers/auth.controller";
-import { authGuard } from "../middlewares/authGuard";
-import { validate } from "../middlewares/validate";
-import { asyncHandler } from "../middlewares/asyncHandler";
-import { strictLimiter } from "../middlewares/rateLimit";
+import { AuthController } from "@/domains/auth/controllers/auth.controller";
+import { authGuard } from "@/middlewares/authGuard";
+import { validate } from "@/middlewares/validate";
+import { asyncHandler } from "@/middlewares/asyncHandler";
+import { strictLimiter } from "@/middlewares/rateLimit";
 
 import {
   loginSchema,

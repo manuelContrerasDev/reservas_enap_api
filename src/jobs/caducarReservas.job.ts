@@ -1,6 +1,6 @@
 // src/jobs/caducarReservas.job.ts
 import cron from "node-cron";
-import { CaducarReservasService } from "../domains/reservas/services/caducar-reservas.service";
+import { CaducarReservasService } from "@/domains/reservas/services/caducar-reservas.service";
 
 type StartCaducidadJobOptions = {
   enabled: boolean;

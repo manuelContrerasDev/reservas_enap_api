@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { EspaciosController } from "@/domains/espacios/controllers/index";
 
-import { authGuard } from "../middlewares/authGuard";
-import { roleGuard } from "../middlewares/roleGuard";
-import { asyncHandler } from "../middlewares/asyncHandler";
+import { authGuard } from "@/middlewares/authGuard";
+import { roleGuard } from "@/middlewares/roleGuard";
+import { asyncHandler } from "@/middlewares/asyncHandler";
 
-import { validate } from "../middlewares/validate";
-import { validateQuery } from "../middlewares/validateQuery";
-import { validateParams } from "../middlewares/validateParams";
+import { validate } from "@/middlewares/validate";
+import { validateQuery } from "@/middlewares/validateQuery";
+import { validateParams } from "@/middlewares/validateParams";
 
 import {
   crearEspacioSchema,

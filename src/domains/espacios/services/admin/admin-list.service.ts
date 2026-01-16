@@ -1,7 +1,7 @@
 // src/services/espacios/admin/admin-list.service.ts
 
-import { EspaciosRepository } from "../../../repositories/espacios/espacios.repository";
-import { toEspacioDTO } from "../../../domains/espacios/mappers/espacioDTO";
+import { EspaciosRepository } from "@/domains/espacios/repositories/espacios.repository";
+import { toEspacioDTO } from "@/domains/espacios/mappers/espacioDTO";
 
 /**
  * Listado completo de espacios (ADMIN)

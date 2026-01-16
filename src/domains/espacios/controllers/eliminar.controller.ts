@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { EspaciosService } from "../../domains/espacios/services";
-import { espacioIdSchema } from "../../validators/espacios";
+import { EspaciosService } from "@/domains/espacios/services";
+import { espacioIdSchema } from "@/domains/espacios/validators";
 
 export const eliminar = async (req: Request, res: Response) => {
   const parsed = espacioIdSchema.safeParse(req.params);

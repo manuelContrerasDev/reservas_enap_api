@@ -4,21 +4,21 @@
 // ============================================================
 
 import { Router } from "express";
-import { ReservasController } from "../domains/reservas/controllers";
+import { ReservasController } from "@/domains/reservas/controllers";
 
-import { authGuard } from "../middlewares/authGuard";
-import { roleGuard } from "../middlewares/roleGuard";
-import { asyncHandler } from "../middlewares/asyncHandler";
+import { authGuard } from "@/middlewares/authGuard";
+import { roleGuard } from "@/middlewares/roleGuard";
+import { asyncHandler } from "@/middlewares/asyncHandler";
 
-import { validate } from "../middlewares/validate";
-import { validateQuery } from "../middlewares/validateQuery";
-import { validateParams } from "../middlewares/validateParams";
+import { validate } from "@/middlewares/validate";
+import { validateQuery } from "@/middlewares/validateQuery";
+import { validateParams } from "@/middlewares/validateParams";
 
 // Schemas
-import { crearReservaSchema } from "../domains/reservas/validators/crear-reserva.schema";
-import { piscinaFechaSchema } from "../domains/reservas/validators/piscina-fecha.schema";
-import { actualizarEstadoSchema } from "../domains/reservas/validators/actualizar-estado-reserva.schema";
-import { idParamSchema } from "../validators/common/id-param.schema";
+import { crearReservaSchema } from "@/domains/reservas/validators/crear-reserva.schema";
+import { piscinaFechaSchema } from "@/domains/reservas/validators/piscina-fecha.schema";
+import { actualizarEstadoSchema } from "@/domains/reservas/validators/actualizar-estado-reserva.schema";
+import { idParamSchema } from "@/shared/validators/common/id-param.schema";
 import { actualizarInvitadosSchema } from "../domains/reservas/validators/actualizar-invitados.schema";
 import { editReservaSchema } from "../domains/reservas/validators/edit-reserva.schema";
 

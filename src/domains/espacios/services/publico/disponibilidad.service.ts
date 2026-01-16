@@ -1,5 +1,5 @@
 // src/services/espacios/socio/disponibilidad.service.ts
-import { DisponibilidadEspacioRepository } from "../../../repositories/espacios";
+import { DisponibilidadEspacioRepository } from "@/domains/espacios/repositories";
 import { TipoEspacio } from "@prisma/client";
 
 export const DisponibilidadEspacioService = {

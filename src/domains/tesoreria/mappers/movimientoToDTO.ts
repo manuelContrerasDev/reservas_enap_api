@@ -1,5 +1,5 @@
 // src/utils/tesoreria/movimientoToDTO.ts
-import type { MovimientoTesoreriaDTO } from "@/domains/tesoreria/mappers/tesoreria.dto";
+import type { MovimientoTesoreriaDTO } from "@/domains/tesoreria/dto/tesoreriaDTO";
 
 type PrismaMovimiento = {
   id: string;
