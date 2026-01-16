@@ -1,7 +1,7 @@
 import { Response } from "express";
 import type { AuthRequest } from "@/types/global";
 import { rechazarPagoService } from "@/domains/reservas/services/rechazar-pago.service";
-import { reservaToDTO } from "../../utils/reservaToDTO";
+import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 /**
  * ❌ RECHAZAR PAGO (ADMIN)

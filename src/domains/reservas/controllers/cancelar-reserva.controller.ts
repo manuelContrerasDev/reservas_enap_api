@@ -2,7 +2,7 @@
 import { Response } from "express";
 import type { AuthRequest } from "../../../types/global";
 import { CancelarReservaService } from "../services/cancelar-reserva.service";
-import { reservaToDTO } from "../utils/reservaToDTO";
+import { reservaToDTO } from "../mappers/reservaToDTO";
 
 export const cancelarReserva = async (req: AuthRequest, res: Response) => {
   try {

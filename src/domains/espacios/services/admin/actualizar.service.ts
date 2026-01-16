@@ -1,7 +1,7 @@
 // src/services/espacios/admin/actualizar.service.ts
 
-import { EspaciosRepository } from "../../../repositories/espacios/espacios.repository";
-import { normalizeActualizarData, toEspacioDTO } from "../../../domains/espacios/mappers/espacioDTO";
+import { EspaciosRepository } from "@/domains/espacios/repositories/espacios.repository";
+import { normalizeActualizarData, toEspacioDTO } from "@/domains/espacios/mappers/espacioDTO";
 import { ModalidadCobro, TipoEspacio } from "@prisma/client";
 
 /**

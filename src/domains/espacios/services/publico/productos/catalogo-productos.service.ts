@@ -1,5 +1,5 @@
 import { obtenerEspaciosActivosService } from "../../base/obtener-espacios-activos.service";
-import { agruparEspaciosPorTipo } from "../../../../../services/espacios/socio/productos/producto-espacio.mapper";
+import { agruparEspaciosPorTipo } from "./index";
 
 export async function catalogoProductosService() {
   const espacios = await obtenerEspaciosActivosService();

@@ -1,6 +1,6 @@
 // src/services/PagosService.ts
-import { prisma } from "../../lib/db";
-import { WebpayProvider } from "../../providers/WebpayProvider";
+import { prisma } from "../../../lib/db";
+import { WebpayProvider } from "../providers/WebpayProvider";
 import { $Enums } from "@prisma/client";
 
 /* ============================================================

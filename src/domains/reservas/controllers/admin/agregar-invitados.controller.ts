@@ -7,7 +7,7 @@ import {
 } from "../../validators/admin-invitados.schema";
 
 import { AgregarInvitadosService } from "../../services/agregar-invitados.service";
-import { reservaToDTO } from "../../utils/reservaToDTO";
+import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 export const agregarInvitadosAdmin = async (
   req: AuthRequest,

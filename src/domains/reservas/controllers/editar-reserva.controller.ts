@@ -3,7 +3,7 @@ import type { AuthRequest } from "../../../types/global";
 
 import { editReservaSchema } from "../validators/edit-reserva.schema";
 import { EditarReservaService } from "../services/editar-reserva.service";
-import { reservaToDTO } from "../utils/reservaToDTO";
+import { reservaToDTO } from "../mappers/reservaToDTO";
 
 export const editarReserva = async (req: AuthRequest, res: Response) => {
   try {

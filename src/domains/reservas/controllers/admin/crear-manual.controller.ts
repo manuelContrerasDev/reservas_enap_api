@@ -12,7 +12,7 @@ import {
 } from "../../validators/reservaManual.schema";
 
 import { ReservaManualService } from "../../services/reserva-manual.service";
-import { reservaToDTO } from "../../utils/reservaToDTO";
+import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 export const crearReservaManualAdmin = async (
   req: AuthRequest,

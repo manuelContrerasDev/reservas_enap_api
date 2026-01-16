@@ -3,7 +3,7 @@ import type { AuthRequest } from "@/types/global";
 
 import { CancelarReservaAdminService } from "@/domains/reservas/services/cancelar-reserva-admin.service";
 import { cancelarReservaAdminSchema } from "@/domains/reservas/validators/cancelar-reserva-admin.schema";
-import { reservaToDTO } from "../../utils/reservaToDTO";
+import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 /**
  * ❌ CANCELAR RESERVA (ADMIN)

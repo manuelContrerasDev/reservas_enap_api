@@ -3,7 +3,7 @@ import { Response } from "express";
 import type { AuthRequest } from "../../../types/global";
 import { subirComprobanteSchema } from "../validators/subir-comprobante.schema";
 import { SubirComprobanteService } from "../services/subir-comprobante.service";
-import { reservaToDTO } from "../utils/reservaToDTO";
+import { reservaToDTO } from "../mappers/reservaToDTO";
 
 export const subirComprobante = async (req: AuthRequest, res: Response) => {
   try {

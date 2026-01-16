@@ -3,8 +3,8 @@ import { Router } from "express";
 import { authGuard } from "@/middlewares/authGuard";
 import { roleGuard } from "@/middlewares/roleGuard";
 
-import { listarAuditLogsController } from "@/controllers/audit/listar-audit-logs.controller";
-import { auditMetaController } from "@/controllers/audit/audit-meta.controller";
+import { listarAuditLogsController } from "@/domains/audit/controllers/listar-audit-logs.controller";
+import { auditMetaController } from "@/domains/audit/controllers/audit-meta.controller";
 
 const router = Router();
 

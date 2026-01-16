@@ -4,7 +4,7 @@ import type { AuthRequest } from "../../../types/global";
 
 import { actualizarInvitadosSchema } from "../validators";
 import { ActualizarInvitadosReservaService } from "../services/actualizar-invitados.service";
-import { reservaToDTO } from "../utils/reservaToDTO";
+import { reservaToDTO } from "../mappers/reservaToDTO";
 
 export const actualizarInvitados = async (req: AuthRequest, res: Response) => {
   try {

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { EspaciosController } from "../controllers/espacios";
+import { EspaciosController } from "@/domains/espacios/controllers/index";
 
 import { authGuard } from "../middlewares/authGuard";
 import { roleGuard } from "../middlewares/roleGuard";
@@ -19,7 +19,7 @@ import {
   // ✅ nuevos
   tipoEspacioSchema,
   disponibilidadRangoSchema,
-} from "../validators/espacios";
+} from "@/domains/espacios/validators/";
 
 const router = Router();
 

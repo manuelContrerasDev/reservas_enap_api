@@ -3,7 +3,7 @@ import { Response } from "express";
 import type { AuthRequest } from "../../../../types/global";
 import { adminConfirmarReservaSchema } from "../../validators/admin-confirmar-reserva.schema";
 import { ConfirmarReservaAdminService } from "../../services/confirmar-reserva-admin.service";
-import { reservaToDTO } from "../../utils/reservaToDTO";
+import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 export const confirmarReservaAdmin = async (
   req: AuthRequest,

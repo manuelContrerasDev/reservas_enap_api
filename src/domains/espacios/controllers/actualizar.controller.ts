@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
-import { EspaciosService } from "../../domains/espacios/services";
+import { EspaciosService } from "@/domains/espacios/services";
 import {
   actualizarEspacioSchema,
   espacioIdSchema,
-} from "../../validators/espacios";
+} from "@/domains/espacios/validators";
 
 export const actualizar = async (req: Request, res: Response) => {
   // 🔐 ADMIN only (validar en middleware de rutas)

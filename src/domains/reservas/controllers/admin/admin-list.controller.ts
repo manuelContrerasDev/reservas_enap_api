@@ -2,7 +2,7 @@ import { Response } from "express";
 import type { AuthRequest } from "../../../../types/global";
 
 import { ReservasAdminListService } from "../../services";
-import { reservaToDTO } from "../../utils/reservaToDTO";
+import { reservaToDTO } from "../../mappers/reservaToDTO";
 import { adminReservasQuerySchema } from "../../validators";
 
 export const obtenerReservasAdmin = async (req: AuthRequest, res: Response) => {

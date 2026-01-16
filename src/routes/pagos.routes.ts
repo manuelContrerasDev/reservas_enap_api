@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { PagosController } from "../controllers/pagos/pagos.controller";
+import { PagosController } from "@/domains/pagos/controllers/pagos.controller";
 import { authGuard } from "../middlewares/authGuard";
 import { roleGuard } from "../middlewares/roleGuard";
 import { asyncHandler } from "../middlewares/asyncHandler";

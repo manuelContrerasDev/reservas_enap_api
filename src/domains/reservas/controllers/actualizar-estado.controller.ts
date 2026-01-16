@@ -3,7 +3,7 @@ import type { AuthRequest } from "../../../types/global";
 import { ZodError } from "zod";
 
 import { ActualizarEstadoReservaService } from "../services";
-import { reservaToDTO } from "../utils/reservaToDTO";
+import { reservaToDTO } from "../mappers/reservaToDTO";
 import { actualizarEstadoSchema } from "../validators";
 
 export const actualizarEstado = async (req: AuthRequest, res: Response) => {

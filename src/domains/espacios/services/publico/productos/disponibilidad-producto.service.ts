@@ -1,7 +1,9 @@
 // src/services/espacios/socio/productos/disponibilidad-producto.service.ts
 import { TipoEspacio } from "@prisma/client";
-import { EspaciosRepository } from "@/repositories/espacios/espacios.repository";
-import { DisponibilidadEspacioRepository } from "@/repositories/espacios/disponibilidad.repository";
+import {
+  EspaciosRepository,
+  DisponibilidadEspacioRepository,
+} from "@/domains/espacios/repositories";
 
 interface DisponibilidadProductoResult {
   tipo: TipoEspacio;

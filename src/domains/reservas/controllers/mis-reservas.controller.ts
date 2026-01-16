@@ -2,7 +2,7 @@ import { Response } from "express";
 import type { AuthRequest } from "../../../types/global";
 
 import { ReservasMiasService } from "../services";
-import { reservaToDTO } from "../utils/reservaToDTO";
+import { reservaToDTO } from "../mappers/reservaToDTO";
 
 export const misReservas = async (req: AuthRequest, res: Response) => {
   // 🔒 authGuard garantiza req.user
