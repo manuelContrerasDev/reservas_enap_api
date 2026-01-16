@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { AuthUser } from "@/types/global";
-import { createAuditLogService } from "@/services/audit/audit-log.service";
+import { createAuditLogService } from "@/domains/audit/services/audit-log.service";
 
 export async function crearMovimientoTesoreriaService(
   admin: AuthUser,

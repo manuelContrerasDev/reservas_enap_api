@@ -1,10 +1,10 @@
 // src/modules/auth/auth.service.ts
 
-import { prisma } from "../../lib/db";
+import { prisma } from "../../../lib/db";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
-import { TokenService } from "../../shared/services/TokenService";
-import { EmailService } from "../../shared/services/EmailService";
+import { TokenService } from "../../../shared/services/TokenService";
+import { EmailService } from "../../../shared/services/EmailService";
 
 /* ============================================================================
  * CONSTANTES

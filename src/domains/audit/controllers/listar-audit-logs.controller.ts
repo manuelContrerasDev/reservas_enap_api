@@ -1,6 +1,6 @@
 import type { Response } from "express";
 import type { AuthRequest } from "@/types/global";
-import { listarAuditLogsService } from "@/services/audit/listar-audit-logs.service";
+import { listarAuditLogsService } from "@/domains/audit/services/listar-audit-logs.service";
 import { AUDIT_ACTIONS, type AuditAction } from "@/constants/audit-actions";
 
 function parseAuditAction(value?: string): AuditAction | undefined {

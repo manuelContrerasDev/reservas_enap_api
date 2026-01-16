@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { requestResetService } from "../../services/auth/auth.service";
+import { requestResetService } from "../services/auth.service";
 
 export const requestReset = async (req: Request, res: Response) => {
   await requestResetService(req.body.email);

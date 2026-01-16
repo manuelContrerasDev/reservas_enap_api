@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { confirmEmailService } from "../../services/auth/auth.service";
+import { confirmEmailService } from "../services/auth.service";
 
 export const confirmEmail = async (req: Request, res: Response) => {
   await confirmEmailService(req.query.token as string);

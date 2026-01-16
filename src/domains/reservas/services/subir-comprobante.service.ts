@@ -2,7 +2,7 @@ import { prisma } from "../../../lib/db";
 import { ReservaEstado } from "@prisma/client";
 import type { AuthUser } from "../../../types/global";
 import type { SubirComprobanteType } from "../validators/subir-comprobante.schema";
-import { createAuditLogService } from "@/services/audit/audit-log.service";
+import { createAuditLogService } from "@/domains/audit/services/audit-log.service";
 import { AUDIT_ACTIONS } from "@/constants/audit-actions";
 
 export const SubirComprobanteService = {

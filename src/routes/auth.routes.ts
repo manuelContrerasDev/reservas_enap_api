@@ -1,6 +1,6 @@
 // src/routes/auth.routes.ts
 import { Router } from "express";
-import { AuthController } from "../controllers/auth/auth.controller";
+import { AuthController } from "../domains/auth/controllers/auth.controller";
 import { authGuard } from "../middlewares/authGuard";
 import { validate } from "../middlewares/validate";
 import { asyncHandler } from "../middlewares/asyncHandler";
@@ -11,7 +11,7 @@ import {
   registerSchema,
   resetRequestSchema,
   resetPasswordSchema,
-} from "../validators/auth/auth.schema";
+} from "../domains/auth/validators/auth.schema";
 
 const router = Router();
 
