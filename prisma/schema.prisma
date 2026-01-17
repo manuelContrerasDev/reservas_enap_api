@@ -193,7 +193,7 @@ model Reserva {
   nombreSocio    String
   rutSocio       String
   telefonoSocio  String
-  correoEnap     String
+  correoEnap     String?
   correoPersonal String?
 
   nombreResponsable    String?
@@ -355,9 +355,11 @@ model AuditLog {
   @@index([userId, createdAt])
 }
 
+
 // --------------------------------------
 // MODEL LUNES EXCEPCION
 // --------------------------------------
+
 model LunesExcepcion {
   id        String   @id @default(uuid())
   fecha     DateTime @unique
@@ -397,12 +399,12 @@ enum UsoReserva {
 }
 
 enum ReservaEstado {
-  PENDIENTE_PAGO
-  CONFIRMADA
-  CANCELADA
-  RECHAZADA
-  CADUCADA
-  FINALIZADA
+  PENDIENTE_PAGO        // creada, SIN comprobante
+  PENDIENTE_VALIDACION  // comprobante subido, esperando ADMIN
+  CONFIRMADA            // validada por ADMIN
+  RECHAZADA             // ADMIN rechaza comprobante (motivo obligatorio)
+  CADUCADA              // sistema (timeout)
+  FINALIZADA            // reserva cumplida (post fechaFin)
 }
 
 enum PaymentStatus {

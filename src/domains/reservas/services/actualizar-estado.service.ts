@@ -6,18 +6,21 @@ import type { AuthUser } from "../../../types/global";
 const ADMIN_TRANSITIONS: Record<ReservaEstado, readonly ReservaEstado[]> = {
   PENDIENTE_PAGO: [
     ReservaEstado.PENDIENTE_PAGO,
+    ReservaEstado.PENDIENTE_VALIDACION,
     ReservaEstado.CONFIRMADA,
     ReservaEstado.RECHAZADA,
-    ReservaEstado.CANCELADA,
     ReservaEstado.CADUCADA,
+  ],
+  PENDIENTE_VALIDACION: [
+    ReservaEstado.PENDIENTE_VALIDACION,
+    ReservaEstado.CONFIRMADA,
+    ReservaEstado.RECHAZADA,
   ],
   CONFIRMADA: [
     ReservaEstado.CONFIRMADA,
     ReservaEstado.FINALIZADA,
-    ReservaEstado.CANCELADA,
   ],
-  RECHAZADA: [ReservaEstado.RECHAZADA, ReservaEstado.PENDIENTE_PAGO],
-  CANCELADA: [ReservaEstado.CANCELADA],
+  RECHAZADA: [ReservaEstado.RECHAZADA],
   CADUCADA: [ReservaEstado.CADUCADA],
   FINALIZADA: [ReservaEstado.FINALIZADA],
 };
@@ -28,59 +31,46 @@ function isTransitionAllowed(from: ReservaEstado, to: ReservaEstado): boolean {
 
 export const ActualizarEstadoReservaService = {
   async ejecutar(id: string, nuevoEstado: ReservaEstado, adminUser: AuthUser) {
-    // 0) ADMIN only
     if (!adminUser || adminUser.role !== Role.ADMIN) {
       throw new Error("NO_AUTORIZADO_ADMIN");
     }
 
-    // 1) Validación de entrada defensiva
-    if (!nuevoEstado) throw new Error("ESTADO_REQUERIDO");
     if (!Object.values(ReservaEstado).includes(nuevoEstado)) {
       throw new Error("ESTADO_INVALIDO");
     }
 
-    // 2) Obtener estado actual
     const reserva = await prisma.reserva.findUnique({
       where: { id },
       select: { id: true, estado: true },
     });
-
     if (!reserva) throw new Error("NOT_FOUND");
 
-    const estadoActual = reserva.estado;
-
-    // ✅ Idempotencia: si ya está en ese estado, no actualizamos ni loggeamos doble
-    if (estadoActual === nuevoEstado) {
+    if (reserva.estado === nuevoEstado) {
       return ReservasAdminRepository.obtenerPorId(id);
     }
 
-    // 3) Validar transición
-    if (!isTransitionAllowed(estadoActual, nuevoEstado)) {
+    if (!isTransitionAllowed(reserva.estado, nuevoEstado)) {
       throw new Error("TRANSICION_INVALIDA");
     }
 
-    // 4) Persistir
-    const reservaActualizada = await ReservasAdminRepository.actualizarEstado(
+    const updated = await ReservasAdminRepository.actualizarEstado(
       id,
       nuevoEstado
     );
 
-    // 5) AuditLog (no bloqueante)
-    prisma.auditLog
-      .create({
-        data: {
-          action: "ACTUALIZAR_ESTADO_RESERVA",
-          entity: "Reserva",
-          entityId: id,
-          userId: adminUser.id,
-          details: {
-            estadoAnterior: estadoActual,
-            nuevoEstado,
-          },
+    prisma.auditLog.create({
+      data: {
+        action: "ACTUALIZAR_ESTADO_RESERVA_ADMIN",
+        entity: "RESERVA",
+        entityId: id,
+        userId: adminUser.id,
+        details: {
+          from: reserva.estado,
+          to: nuevoEstado,
         },
-      })
-      .catch(() => {});
+      },
+    }).catch(() => {});
 
-    return reservaActualizada;
+    return updated;
   },
 };

@@ -13,23 +13,15 @@ import { validateParams } from "@/middlewares/validateParams";
 
 import {
   catalogoContratoController,
-} from "@/domains/espacios/contrato/controllers/catalogo.controller";
-
-import {
   detalleContratoController,
-} from "@/domains/espacios/contrato/controllers/detalle.controller";
+} from "@/domains/espacios/contrato/controllers";
 
 import {
   catalogoContratoQuerySchema,
-} from "@/domains/espacios/contrato/validators/catalogo-query.schema";
-
-import {
   detalleContratoQuerySchema,
-} from "@/domains/espacios/contrato/validators/detalle-query.schema";
+} from "@/domains/espacios/contrato/validators";
 
-import {
-  tipoEspacioSchema,
-} from "@/domains/espacios/validators";
+import { tipoEspacioSchema } from "@/domains/espacios/validators";
 
 // ============================================================
 // 🛠️ CONTRATO ESPACIOS — ADMIN
@@ -37,19 +29,10 @@ import {
 
 import {
   seedEspacioTipoConfigController,
-} from "@/domains/espacios/contrato/admin/controllers/seed-config.controller";
-
-import {
   patchEspacioTipoConfigController,
-} from "@/domains/espacios/contrato/admin/controllers/patch-config.controller";
-
-import {
   patchVisibilidadController,
-} from "@/domains/espacios/contrato/admin/controllers/patch-visibilidad.controller";
-
-import {
   deleteEspacioTipoConfigController,
-} from "@/domains/espacios/contrato/admin/controllers/delete-config.controller";
+} from "@/domains/espacios/contrato/admin/controllers";
 
 // ============================================================
 // ⚠️ LEGACY (NO USAR EN NUEVO FRONTEND)
@@ -65,6 +48,7 @@ import {
   toggleEspacioSchema,
   disponibilidadRangoSchema,
 } from "@/domains/espacios/validators";
+
 
 const router = Router();
 

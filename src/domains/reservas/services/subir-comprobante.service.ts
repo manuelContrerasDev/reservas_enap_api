@@ -1,3 +1,8 @@
+// ============================================================
+// src/domains/reservas/services/subir-comprobante.service.ts
+// ENAP 2026 — Sync con contrato Reservas
+// ============================================================
+
 import { prisma } from "../../../lib/db";
 import { ReservaEstado } from "@prisma/client";
 import type { AuthUser } from "../../../types/global";
@@ -7,26 +12,38 @@ import { AUDIT_ACTIONS } from "@/constants/audit-actions";
 
 export const SubirComprobanteService = {
   async ejecutar(reservaId: string, data: SubirComprobanteType, user: AuthUser) {
-    if (!user) throw new Error("NO_AUTH");
+    if (!user?.id) throw new Error("NO_AUTH");
 
     const reserva = await prisma.reserva.findUnique({
       where: { id: reservaId },
+      select: {
+        id: true,
+        estado: true,
+        userId: true,
+        comprobanteUrl: true,
+      },
     });
 
     if (!reserva) throw new Error("NOT_FOUND");
 
+    // 🔐 Permisos
     if (user.role !== "ADMIN" && reserva.userId !== user.id) {
       throw new Error("FORBIDDEN");
     }
 
-    const estadosBloqueados: ReservaEstado[] = [
-      ReservaEstado.CANCELADA,
-      ReservaEstado.RECHAZADA,
-      ReservaEstado.CADUCADA,
-    ];
-
-    if (estadosBloqueados.includes(reserva.estado)) {
+    // 🚫 Estados que NO admiten comprobante
+    if (
+      reserva.estado === ReservaEstado.RECHAZADA ||
+      reserva.estado === ReservaEstado.CADUCADA ||
+      reserva.estado === ReservaEstado.CONFIRMADA ||
+      reserva.estado === ReservaEstado.FINALIZADA
+    ) {
       throw new Error("RESERVA_NO_ADMITE_COMPROBANTE");
+    }
+
+    // ✅ Solo se puede subir desde PENDIENTE_PAGO
+    if (reserva.estado !== ReservaEstado.PENDIENTE_PAGO) {
+      throw new Error("ESTADO_INVALIDO_PARA_COMPROBANTE");
     }
 
     const updated = await prisma.reserva.update({
@@ -36,6 +53,9 @@ export const SubirComprobanteService = {
         comprobanteName: data.comprobanteName,
         comprobanteMime: data.comprobanteMime,
         comprobanteSize: data.comprobanteSize,
+
+        // 🔁 Transición contractual
+        estado: ReservaEstado.PENDIENTE_VALIDACION,
       },
     });
 
@@ -44,8 +64,14 @@ export const SubirComprobanteService = {
       entity: "RESERVA",
       entityId: reservaId,
       actor: user,
-      before: { comprobanteUrl: reserva.comprobanteUrl },
-      after: { comprobanteUrl: updated.comprobanteUrl },
+      before: {
+        estado: reserva.estado,
+        comprobanteUrl: reserva.comprobanteUrl,
+      },
+      after: {
+        estado: ReservaEstado.PENDIENTE_VALIDACION,
+        comprobanteUrl: updated.comprobanteUrl,
+      },
     });
 
     return updated;

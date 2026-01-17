@@ -1,3 +1,7 @@
+// ============================================================
+// aprobar-pago.service.ts — ENAP 2026
+// ============================================================
+
 import { prisma } from "../../../lib/db";
 import { ReservaEstado } from "@prisma/client";
 import type { AuthUser } from "../../../types/global";
@@ -25,12 +29,13 @@ export async function aprobarPagoService(
 
   if (!reserva) throw new Error("NOT_FOUND");
 
-  // 🔒 Defensa extra ante estados corruptos
+  // 🔒 Defensa extra
   if (reserva.confirmedAt) {
     throw new Error("YA_CONFIRMADA");
   }
 
-  if (reserva.estado !== ReservaEstado.PENDIENTE_PAGO) {
+  // ✅ CONTRATO: solo desde PENDIENTE_VALIDACION
+  if (reserva.estado !== ReservaEstado.PENDIENTE_VALIDACION) {
     throw new Error("TRANSICION_INVALIDA");
   }
 
@@ -50,7 +55,7 @@ export async function aprobarPagoService(
         estado: ReservaEstado.CONFIRMADA,
         confirmedAt: new Date(),
         confirmedBy: admin.id,
-        expiresAt: null,
+        expiresAt: null, // ya no aplica
       },
     });
 

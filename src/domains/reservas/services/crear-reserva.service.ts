@@ -1,9 +1,9 @@
 // ============================================================
-// crear.service.ts — ENAP 2025 (PRODUCTION READY)
+// crear.service.ts — ENAP 2025 (SYNC WITH ESPACIOS)
 // ============================================================
 
 import { prisma } from "../../../lib/db";
-import { ReservaEstado, Role, TipoEspacio } from "@prisma/client";
+import { ReservaEstado } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
 import { calcularReserva } from "../utils/calcularReserva";
 import { ReservasCreateRepository } from "../repositories";
@@ -15,12 +15,15 @@ export const CrearReservaService = {
     if (!user) throw new Error("NO_AUTH");
 
     /* --------------------------------------------------------
-     * 1) Obtener espacio
+     * 1) Obtener espacio (unidad ya validada por Módulo ESPACIOS)
      * -------------------------------------------------------- */
     const espacio = await prisma.espacio.findUnique({
       where: { id: data.espacioId },
     });
-    if (!espacio) throw new Error("ESPACIO_NOT_FOUND");
+
+    if (!espacio) {
+      throw new Error("ESPACIO_NOT_FOUND");
+    }
 
     /* --------------------------------------------------------
      * 2) Fechas
@@ -28,42 +31,18 @@ export const CrearReservaService = {
     const inicio = new Date(data.fechaInicio);
     const fin = new Date(data.fechaFin);
 
-    if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
       throw new Error("FECHAS_INVALIDAS");
+    }
+
+    if (inicio > fin) {
+      throw new Error("RANGO_FECHAS_INVALIDO");
     }
 
     const dias = differenceInCalendarDays(fin, inicio) + 1;
 
     /* --------------------------------------------------------
-    * 3) Disponibilidad (NO piscina)
-    * -------------------------------------------------------- */
-    if (espacio.tipo !== TipoEspacio.PISCINA) {
-      const solapadas = await prisma.reserva.count({
-        where: {
-          espacioId: espacio.id,
-          estado: {
-            in: [
-              ReservaEstado.PENDIENTE_PAGO,
-              ReservaEstado.CONFIRMADA,
-            ],
-          },
-          cancelledAt: null,
-          NOT: {
-            OR: [
-              { fechaFin: { lte: inicio } },
-              { fechaInicio: { gte: fin } },
-            ],
-          },
-        },
-      });
-
-      if (solapadas > 0) {
-        throw new Error("FECHAS_NO_DISPONIBLES");
-      }
-    }
-
-    /* --------------------------------------------------------
-     * 4) Invitados y cantidades
+     * 3) Invitados y cantidades (snapshot)
      * -------------------------------------------------------- */
     const invitados = data.invitados.map(i => ({
       nombre: i.nombre.trim(),
@@ -83,21 +62,16 @@ export const CrearReservaService = {
       invitados.filter(i => i.esPiscina).length;
 
     /* --------------------------------------------------------
-     * 5) Capacidad
+     * 4) Capacidad (FUENTE ÚNICA: espacio.capacidad)
      * -------------------------------------------------------- */
-    if (espacio.tipo === TipoEspacio.CABANA && cantidadAdultos + cantidadNinos > 6) {
-      throw new Error("CAPACIDAD_CABANA_SUPERADA");
-    }
+    const totalPersonas = cantidadAdultos + cantidadNinos;
 
-    if (espacio.tipo === TipoEspacio.QUINCHO) {
-      const max = user.role === Role.SOCIO ? 15 : 10;
-      if (cantidadAdultos + cantidadNinos > max) {
-        throw new Error("CAPACIDAD_QUINCHO_SUPERADA");
-      }
+    if (espacio.capacidad && totalPersonas > espacio.capacidad) {
+      throw new Error("CAPACIDAD_SUPERADA");
     }
 
     /* --------------------------------------------------------
-     * 6) Cálculo financiero
+     * 5) Cálculo financiero (snapshot)
      * -------------------------------------------------------- */
     const precios = calcularReserva({
       espacio: {
@@ -106,9 +80,9 @@ export const CrearReservaService = {
         precioBaseSocio: espacio.precioBaseSocio,
         precioBaseExterno: espacio.precioBaseExterno,
         precioPersonaAdicionalSocio:
-        espacio.precioPersonaAdicionalSocio,
+          espacio.precioPersonaAdicionalSocio,
         precioPersonaAdicionalExterno:
-        espacio.precioPersonaAdicionalExterno,
+          espacio.precioPersonaAdicionalExterno,
         precioPiscinaSocio: espacio.precioPiscinaSocio,
         precioPiscinaExterno: espacio.precioPiscinaExterno,
       },
@@ -121,34 +95,41 @@ export const CrearReservaService = {
     });
 
     /* --------------------------------------------------------
-     * 7) Persistencia (transacción)
+     * 6) Persistencia (transacción)
      * -------------------------------------------------------- */
     const reserva = await prisma.$transaction(async tx => {
       const r = await ReservasCreateRepository.crearReserva(tx, {
         userId: user.id,
         espacioId: espacio.id,
+        tipoEspacio: espacio.tipo,
         fechaInicio: inicio,
         fechaFin: fin,
         dias,
         estado: ReservaEstado.PENDIENTE_PAGO,
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+
         cantidadAdultos,
         cantidadNinos,
         cantidadPiscina,
+
         precioBaseSnapshot: precios.precioBaseSnapshot,
         precioPersonaSnapshot: precios.precioPersonaSnapshot,
         precioPiscinaSnapshot: precios.precioPiscinaSnapshot,
         totalClp: precios.totalClp,
+
         nombreSocio: data.nombreSocio,
         rutSocio: data.rutSocio,
         telefonoSocio: data.telefonoSocio,
-        correoEnap: data.correoEnap,
+        correoEnap: data.correoEnap ?? null,
         correoPersonal: data.correoPersonal ?? null,
+
         usoReserva: data.usoReserva,
+
         nombreResponsable: data.nombreResponsable ?? null,
         rutResponsable: data.rutResponsable ?? null,
         emailResponsable: data.emailResponsable ?? null,
         telefonoResponsable: data.telefonoResponsable ?? null,
+
         terminosAceptados: true,
         terminosVersion: data.terminosVersion ?? "2025-ENAP",
       });

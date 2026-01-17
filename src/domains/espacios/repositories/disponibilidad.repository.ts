@@ -17,6 +17,9 @@ export const DisponibilidadEspacioRepository = {
           // Confirmada siempre bloquea
           { estado: ReservaEstado.CONFIRMADA },
 
+          // Pendiente de validación siempre bloquea
+          { estado: ReservaEstado.PENDIENTE_VALIDACION },
+
           // Pendiente bloquea solo si NO está expirada
           {
             estado: ReservaEstado.PENDIENTE_PAGO,

@@ -1,4 +1,4 @@
-// src/services/reservas/cancelar-reserva.service.ts
+// src/domains/reservas/services/cancelar-reserva.service.ts
 import { ReservaEstado } from "@prisma/client";
 import type { AuthUser } from "../../../types/global";
 import { ReservasCancelarRepository } from "../repositories/cancelar.repository";
@@ -21,41 +21,40 @@ export const CancelarReservaService = {
       throw new Error("NO_PERMITIDO");
     }
 
-    // ✅ Regla de negocio: SOLO si está PENDIENTE_PAGO
-    if (reserva.estado !== ReservaEstado.PENDIENTE_PAGO) {
+    if (
+      reserva.estado !== ReservaEstado.PENDIENTE_PAGO &&
+      reserva.estado !== ReservaEstado.PENDIENTE_VALIDACION
+    ) {
       throw new Error("RESERVA_NO_CANCELABLE");
     }
 
-    // ✅ Regla temporal: nunca cancelar el mismo día o después
     const hoy = startOfDay(new Date());
     const inicio = startOfDay(new Date(reserva.fechaInicio));
     if (hoy >= inicio) throw new Error("NO_PERMITIDO_TIEMPO");
 
-    // ✅ Regla 24h: si existe expiresAt (tu modelo lo tiene)
-    if (reserva.expiresAt && new Date() >= new Date(reserva.expiresAt)) {
-      throw new Error("RESERVA_CADUCADA");
-    }
+    const updated = await ReservasCancelarRepository.actualizarEstado(
+      reservaId,
+      ReservaEstado.RECHAZADA,
+      {
+        cancelledAt: new Date(),
+        cancelledBy: "USER",
+      }
+    );
 
-    const reservaActualizada = await ReservasCancelarRepository.cancelarPorUsuario(reservaId);
-
-    // AuditLog no bloqueante (incluye motivo si llega)
-    prisma.auditLog
-      .create({
-        data: {
-          action: "CANCELAR_RESERVA_USUARIO",
-          entity: "Reserva",
-          entityId: reservaId,
-          userId: user.id,
-          details: {
-            estadoAnterior: reserva.estado,
-            nuevoEstado: "CANCELADA",
-            motivo: motivo ?? null,
-            expiresAt: reserva.expiresAt ?? null,
-          },
+    prisma.auditLog.create({
+      data: {
+        action: "CANCELAR_RESERVA_USUARIO",
+        entity: "RESERVA",
+        entityId: reservaId,
+        userId: user.id,
+        details: {
+          from: reserva.estado,
+          to: ReservaEstado.RECHAZADA,
+          motivo: motivo?.trim() || null,
         },
-      })
-      .catch(() => {});
+      },
+    }).catch(() => {});
 
-    return reservaActualizada;
+    return updated;
   },
 };

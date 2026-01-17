@@ -1,4 +1,8 @@
-// src/repositories/reservas/cancelar.repository.ts
+// ============================================================
+// src/domains/reservas/repositories/cancelar.repository.ts
+// ENAP 2026 — Sync con contrato Reservas
+// ============================================================
+
 import { prisma } from "../../../lib/db";
 import { Prisma, ReservaEstado } from "@prisma/client";
 
@@ -32,6 +36,9 @@ const includeReserva = {
 } satisfies Prisma.ReservaInclude;
 
 export const ReservasCancelarRepository = {
+  /**
+   * Reserva ligera para validaciones de service
+   */
   obtenerLigera(id: string) {
     return prisma.reserva.findUnique({
       where: { id },
@@ -41,35 +48,31 @@ export const ReservasCancelarRepository = {
         estado: true,
         fechaInicio: true,
         fechaFin: true,
-
         createdAt: true,
-        expiresAt: true, // ✅ CLAVE PARA REGLA 24H
-
+        expiresAt: true,
         cancelledAt: true,
         cancelledBy: true,
       },
     });
   },
 
-  cancelarPorUsuario(id: string) {
+  /**
+   * Actualiza estado de reserva (GENÉRICO)
+   * ⚠️ Reglas de negocio se validan en el service
+   */
+  actualizarEstado(
+    id: string,
+    estado: ReservaEstado,
+    extra?: {
+      cancelledAt?: Date;
+      cancelledBy?: "USER" | "ADMIN" | "SYSTEM";
+    }
+  ) {
     return prisma.reserva.update({
       where: { id },
       data: {
-        estado: ReservaEstado.CANCELADA,
-        cancelledAt: new Date(),
-        cancelledBy: "USER",
-      },
-      include: includeReserva,
-    });
-  },
-
-  cancelarPorAdmin(id: string) {
-    return prisma.reserva.update({
-      where: { id },
-      data: {
-        estado: ReservaEstado.CANCELADA,
-        cancelledAt: new Date(),
-        cancelledBy: "ADMIN",
+        estado,
+        ...extra,
       },
       include: includeReserva,
     });

@@ -4,7 +4,6 @@ import { prisma } from "../../../lib/db";
 import { ReservaEstado, TipoEspacio } from "@prisma/client";
 
 export const PiscinaRepository = {
-
   reservasPorDia(fecha: Date) {
     const inicioDia = new Date(fecha);
     inicioDia.setHours(0, 0, 0, 0);
@@ -12,16 +11,28 @@ export const PiscinaRepository = {
     const finDia = new Date(fecha);
     finDia.setHours(23, 59, 59, 999);
 
+    const now = new Date();
+
     return prisma.reserva.findMany({
       where: {
         espacio: { tipo: TipoEspacio.PISCINA },
-        estado: {
-          in: [ReservaEstado.PENDIENTE_PAGO, ReservaEstado.CONFIRMADA],
-        },
+
+        // ✅ Estados que bloquean cupo piscina
         OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
+          // Confirmadas siempre bloquean
+          { estado: ReservaEstado.CONFIRMADA },
+
+          // Pendiente de validación siempre bloquea
+          { estado: ReservaEstado.PENDIENTE_VALIDACION },
+
+          // Pendiente de pago solo si no ha expirado
+          {
+            estado: ReservaEstado.PENDIENTE_PAGO,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
         ],
+
+        // Solape de fechas
         fechaInicio: { lte: finDia },
         fechaFin: { gte: inicioDia },
       },

@@ -1,3 +1,7 @@
+// ============================================================
+// rechazar-pago.service.ts — ENAP 2026
+// ============================================================
+
 import { prisma } from "../../../lib/db";
 import { ReservaEstado } from "@prisma/client";
 import type { AuthUser } from "../../../types/global";
@@ -21,8 +25,11 @@ export async function rechazarPagoService(
   });
 
   if (!reserva) throw new Error("NOT_FOUND");
-  if (reserva.estado !== ReservaEstado.PENDIENTE_PAGO)
+
+  // ✅ CONTRATO
+  if (reserva.estado !== ReservaEstado.PENDIENTE_VALIDACION) {
     throw new Error("TRANSICION_INVALIDA");
+  }
 
   return prisma.$transaction(async (tx) => {
     const reservaActualizada = await tx.reserva.update({
