@@ -1,7 +1,9 @@
+// src/domains/reservas/mappers/reservaToDTO.ts
+
 export const reservaToDTO = (r: any) => ({
   id: r.id,
 
-  // contrato del producto reservado
+  // contrato con espacios
   tipoEspacio: r.tipoEspacio ?? r.espacio?.tipo ?? null,
   espacioId: r.espacioId ?? null,
 
@@ -22,7 +24,7 @@ export const reservaToDTO = (r: any) => ({
   estado: r.estado,
   totalClp: r.totalClp,
 
-  // auditoría / control
+  // auditoría / lifecycle
   createdAt: r.createdAt?.toISOString?.() ?? r.createdAt,
   updatedAt: r.updatedAt?.toISOString?.() ?? r.updatedAt,
 
@@ -33,7 +35,7 @@ export const reservaToDTO = (r: any) => ({
   confirmedAt: r.confirmedAt?.toISOString?.() ?? r.confirmedAt ?? null,
   confirmedBy: r.confirmedBy ?? null,
 
-  // pago manual (flujo transferencia)
+  // flujo pago manual
   comprobante: {
     url: r.comprobanteUrl ?? null,
     name: r.comprobanteName ?? null,
@@ -53,7 +55,7 @@ export const reservaToDTO = (r: any) => ({
     precioPiscina: r.precioPiscinaSnapshot ?? null,
   },
 
-  // quien reserva (puede ser socio o externo)
+  // solicitante (socio o externo)
   solicitante: {
     nombre: r.nombreSocio,
     rut: r.rutSocio,
@@ -82,7 +84,6 @@ export const reservaToDTO = (r: any) => ({
       esPiscina: i.esPiscina ?? false,
     })) ?? [],
 
-  // Pago (si existe) → transactionDate es STRING en tu schema
   pago: r.pago
     ? {
         id: r.pago.id,
