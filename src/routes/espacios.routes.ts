@@ -3,12 +3,14 @@ import { Router } from "express";
 import { authGuard } from "@/middlewares/authGuard";
 import { roleGuard } from "@/middlewares/roleGuard";
 import { asyncHandler } from "@/middlewares/asyncHandler";
-
 import { validate } from "@/middlewares/validate";
 import { validateQuery } from "@/middlewares/validateQuery";
 import { validateParams } from "@/middlewares/validateParams";
 
-// CONTRATO ESPACIOS (OFICIAL)
+// ============================================================
+// 📦 CONTRATO ESPACIOS — PÚBLICO (OFICIAL v1.1)
+// ============================================================
+
 import {
   catalogoContratoController,
 } from "@/domains/espacios/contrato/controllers/catalogo.controller";
@@ -25,8 +27,35 @@ import {
   detalleContratoQuerySchema,
 } from "@/domains/espacios/contrato/validators/detalle-query.schema";
 
-import { EspaciosController } from "@/domains/espacios/controllers/index";
+import {
+  tipoEspacioSchema,
+} from "@/domains/espacios/validators";
 
+// ============================================================
+// 🛠️ CONTRATO ESPACIOS — ADMIN
+// ============================================================
+
+import {
+  seedEspacioTipoConfigController,
+} from "@/domains/espacios/contrato/admin/controllers/seed-config.controller";
+
+import {
+  patchEspacioTipoConfigController,
+} from "@/domains/espacios/contrato/admin/controllers/patch-config.controller";
+
+import {
+  patchVisibilidadController,
+} from "@/domains/espacios/contrato/admin/controllers/patch-visibilidad.controller";
+
+import {
+  deleteEspacioTipoConfigController,
+} from "@/domains/espacios/contrato/admin/controllers/delete-config.controller";
+
+// ============================================================
+// ⚠️ LEGACY (NO USAR EN NUEVO FRONTEND)
+// ============================================================
+
+import { EspaciosController } from "@/domains/espacios/controllers";
 
 import {
   crearEspacioSchema,
@@ -34,13 +63,14 @@ import {
   catalogoQuerySchema,
   espacioIdSchema,
   toggleEspacioSchema,
-
-  // ✅ nuevos
-  tipoEspacioSchema,
   disponibilidadRangoSchema,
-} from "@/domains/espacios/validators/";
+} from "@/domains/espacios/validators";
 
 const router = Router();
+
+/* ============================================================
+ * 🌐 PÚBLICO — CONTRATO ESPACIOS
+ * ============================================================ */
 
 router.get(
   "/catalogo",
@@ -56,8 +86,41 @@ router.get(
 );
 
 /* ============================================================
- * 🛠 ADMIN — LISTAR ESPACIOS
+ * 🔐 ADMIN — CONFIGURACIÓN CATÁLOGO (CONTRATO)
  * ============================================================ */
+
+router.post(
+  "/admin/espacios/config",
+  authGuard,
+  roleGuard(["ADMIN"]),
+  asyncHandler(seedEspacioTipoConfigController)
+);
+
+router.patch(
+  "/admin/espacios/config/:tipo",
+  authGuard,
+  roleGuard(["ADMIN"]),
+  asyncHandler(patchEspacioTipoConfigController)
+);
+
+router.patch(
+  "/admin/espacios/config/:tipo/visibilidad",
+  authGuard,
+  roleGuard(["ADMIN"]),
+  asyncHandler(patchVisibilidadController)
+);
+
+router.delete(
+  "/admin/espacios/config/:tipo",
+  authGuard,
+  roleGuard(["ADMIN"]),
+  asyncHandler(deleteEspacioTipoConfigController)
+);
+
+/* ============================================================
+ * 🧟 LEGACY — ESPACIOS (NO USAR EN NUEVOS FLUJOS)
+ * ============================================================ */
+
 router.get(
   "/admin",
   authGuard,
@@ -65,18 +128,11 @@ router.get(
   asyncHandler(EspaciosController.adminList)
 );
 
-/* ============================================================
- * 🧩 CATÁLOGO AGRUPADO (PRODUCTOS) — NUEVO
- * ============================================================ */
 router.get(
   "/productos",
   asyncHandler(EspaciosController.catalogoProductos)
 );
 
-/* ============================================================
- * 📅 DISPONIBILIDAD POR PRODUCTO (AGRUPADO) — NUEVO
- * /productos/:tipo/disponibilidad?fechaInicio&fechaFin
- * ============================================================ */
 router.get(
   "/productos/:tipo/disponibilidad",
   validateParams(tipoEspacioSchema),
@@ -84,36 +140,24 @@ router.get(
   asyncHandler(EspaciosController.catalogoProductosDisponibilidad)
 );
 
-/* ============================================================
- * 📌 CATÁLOGO PÚBLICO (LEGACY / POR UNIDAD)
- * ============================================================ */
 router.get(
   "/",
   validateQuery(catalogoQuerySchema),
   asyncHandler(EspaciosController.catalogo)
 );
 
-/* ============================================================
- * 📅 DISPONIBILIDAD POR UNIDAD (LEGACY)
- * ============================================================ */
 router.get(
   "/:id/disponibilidad",
   validateParams(espacioIdSchema),
   asyncHandler(EspaciosController.disponibilidad)
 );
 
-/* ============================================================
- * 📄 DETALLE INDIVIDUAL (LEGACY)
- * ============================================================ */
 router.get(
   "/:id",
   validateParams(espacioIdSchema),
   asyncHandler(EspaciosController.detalle)
 );
 
-/* ============================================================
- * 🛠 ADMIN — CREAR
- * ============================================================ */
 router.post(
   "/",
   authGuard,
@@ -122,9 +166,6 @@ router.post(
   asyncHandler(EspaciosController.crear)
 );
 
-/* ============================================================
- * 🛠 ADMIN — ACTUALIZAR
- * ============================================================ */
 router.put(
   "/:id",
   authGuard,
@@ -134,9 +175,6 @@ router.put(
   asyncHandler(EspaciosController.actualizar)
 );
 
-/* ============================================================
- * ❗ ADMIN — ELIMINAR
- * ============================================================ */
 router.delete(
   "/:id",
   authGuard,
@@ -145,9 +183,6 @@ router.delete(
   asyncHandler(EspaciosController.eliminar)
 );
 
-/* ============================================================
- * 🔄 ADMIN — TOGGLE ACTIVO
- * ============================================================ */
 router.patch(
   "/:id/toggle",
   authGuard,
@@ -155,6 +190,5 @@ router.patch(
   validateParams(toggleEspacioSchema),
   asyncHandler(EspaciosController.toggleActivo)
 );
-
 
 export default router;
