@@ -21,6 +21,7 @@ import { actualizarEstadoSchema } from "@/domains/reservas/validators/actualizar
 import { idParamSchema } from "@/shared/validators/common/id-param.schema";
 import { actualizarInvitadosSchema } from "../domains/reservas/validators/actualizar-invitados.schema";
 import { editReservaSchema } from "../domains/reservas/validators/edit-reserva.schema";
+import { misReservasQuerySchema } from "@/domains/reservas/validators/mis-reservas.schema";
 
 const router = Router();
 
@@ -46,6 +47,7 @@ router.post(
 router.get(
   "/mis-reservas",
   authGuard,
+  validateQuery(misReservasQuerySchema),
   asyncHandler(ReservasController.misReservas)
 );
 

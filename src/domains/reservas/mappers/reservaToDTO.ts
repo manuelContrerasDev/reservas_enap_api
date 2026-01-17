@@ -1,7 +1,9 @@
-// src/controllers/reservas/utils/reservaToDTO.ts
-
 export const reservaToDTO = (r: any) => ({
   id: r.id,
+
+  // contrato del producto reservado
+  tipoEspacio: r.tipoEspacio ?? r.espacio?.tipo ?? null,
+  espacioId: r.espacioId ?? null,
 
   espacio: r.espacio
     ? {
@@ -9,73 +11,68 @@ export const reservaToDTO = (r: any) => ({
         nombre: r.espacio.nombre,
         tipo: r.espacio.tipo,
         capacidad: r.espacio.capacidad ?? null,
+        imagenUrl: r.espacio.imagenUrl ?? null,
       }
-    : {
-        id: r.espacioId,
-        nombre: null,
-        tipo: null,
-        capacidad: null,
-      },
+    : null,
 
-  fechaInicio: r.fechaInicio.toISOString(),
-  fechaFin: r.fechaFin.toISOString(),
+  fechaInicio: r.fechaInicio?.toISOString?.() ?? r.fechaInicio,
+  fechaFin: r.fechaFin?.toISOString?.() ?? r.fechaFin,
   dias: r.dias,
 
   estado: r.estado,
   totalClp: r.totalClp,
 
-  // ======================
-  // Auditoría / control
-  // ======================
-  expiresAt: r.expiresAt?.toISOString() ?? null,
-  cancelledAt: r.cancelledAt?.toISOString() ?? null,
+  // auditoría / control
+  createdAt: r.createdAt?.toISOString?.() ?? r.createdAt,
+  updatedAt: r.updatedAt?.toISOString?.() ?? r.updatedAt,
+
+  expiresAt: r.expiresAt?.toISOString?.() ?? r.expiresAt ?? null,
+  cancelledAt: r.cancelledAt?.toISOString?.() ?? r.cancelledAt ?? null,
   cancelledBy: r.cancelledBy ?? null,
 
-  // ======================
-  // Cantidades
-  // ======================
+  confirmedAt: r.confirmedAt?.toISOString?.() ?? r.confirmedAt ?? null,
+  confirmedBy: r.confirmedBy ?? null,
+
+  // pago manual (flujo transferencia)
+  comprobante: {
+    url: r.comprobanteUrl ?? null,
+    name: r.comprobanteName ?? null,
+    mime: r.comprobanteMime ?? null,
+    size: r.comprobanteSize ?? null,
+  },
+
+  // cantidades
   cantidadAdultos: r.cantidadAdultos ?? 0,
   cantidadNinos: r.cantidadNinos ?? 0,
   cantidadPiscina: r.cantidadPiscina ?? 0,
 
-  // ======================
-  // Snapshot financiero
-  // ======================
+  // snapshot financiero
   snapshot: {
     precioBase: r.precioBaseSnapshot ?? null,
     precioPersona: r.precioPersonaSnapshot ?? null,
     precioPiscina: r.precioPiscinaSnapshot ?? null,
   },
 
-  // ======================
-  // Socio
-  // ======================
-  socio: {
+  // quien reserva (puede ser socio o externo)
+  solicitante: {
     nombre: r.nombreSocio,
     rut: r.rutSocio,
     telefono: r.telefonoSocio,
-    correoEnap: r.correoEnap,
+    correoEnap: r.correoEnap ?? null,
     correoPersonal: r.correoPersonal ?? null,
   },
 
   usoReserva: r.usoReserva,
 
-  // ======================
-  // Responsable (solo si existe)
-  // ======================
-  responsable:
-    r.nombreResponsable
-      ? {
-          nombre: r.nombreResponsable,
-          rut: r.rutResponsable,
-          email: r.emailResponsable,
-          telefono: r.telefonoResponsable,
-        }
-      : null,
+  responsable: r.nombreResponsable
+    ? {
+        nombre: r.nombreResponsable,
+        rut: r.rutResponsable ?? null,
+        email: r.emailResponsable ?? null,
+        telefono: r.telefonoResponsable ?? null,
+      }
+    : null,
 
-  // ======================
-  // Invitados
-  // ======================
   invitados:
     r.invitados?.map((i: any) => ({
       id: i.id,
@@ -85,16 +82,18 @@ export const reservaToDTO = (r: any) => ({
       esPiscina: i.esPiscina ?? false,
     })) ?? [],
 
-  // ======================
-  // Pago (si existe)
-  // ======================
+  // Pago (si existe) → transactionDate es STRING en tu schema
   pago: r.pago
     ? {
         id: r.pago.id,
         status: r.pago.status,
         amountClp: r.pago.amountClp,
-        transactionDate:
-          r.pago.transactionDate?.toISOString() ?? null,
+        transactionDate: r.pago.transactionDate ?? null,
       }
     : null,
+
+  terminos: {
+    aceptados: r.terminosAceptados ?? null,
+    version: r.terminosVersion ?? null,
+  },
 });
