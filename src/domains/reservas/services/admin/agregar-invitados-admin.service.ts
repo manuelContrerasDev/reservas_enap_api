@@ -2,7 +2,7 @@
 // agregar-invitados.service.ts — ENAP 2025 (ADMIN · PRO)
 // ============================================================
 
-import { prisma } from "../../../lib/db";
+import { prisma } from "../../../../lib/db";
 import { ReservaEstado } from "@prisma/client";
 
 /* ================= TIPOS ================= */
@@ -22,7 +22,7 @@ interface Params {
 
 /* ================= SERVICE ================= */
 
-export const AgregarInvitadosService = {
+export const AgregarInvitadosAdminService = {
   async ejecutar({ reservaId, invitados, adminId }: Params) {
     const reserva = await prisma.reserva.findUnique({
       where: { id: reservaId },

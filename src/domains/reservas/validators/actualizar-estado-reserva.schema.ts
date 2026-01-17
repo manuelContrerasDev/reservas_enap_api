@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { ReservaEstado } from "@prisma/client";
 
-export const actualizarEstadoSchema = z.object({
+export const actualizarEstadoReservaSchema = z.object({
   estado: z.nativeEnum(ReservaEstado, {
-    message: "Estado inválido",
+    message: "ESTADO_INVALIDO",
   }),
 });
 
-export type ActualizarEstadoType = z.infer<typeof actualizarEstadoSchema>;
+export type ActualizarEstadoReservaInput = z.infer<
+  typeof actualizarEstadoReservaSchema
+>;

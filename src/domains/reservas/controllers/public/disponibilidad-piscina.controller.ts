@@ -2,8 +2,8 @@
 
 import { Response } from "express";
 import type { Request } from "express";
-import { piscinaFechaSchema } from "../validators";
-import { DisponibilidadPiscinaService } from "../services";
+import { piscinaFechaSchema } from "../../validators";
+import { DisponibilidadPiscinaService } from "../../services";
 
 export const disponibilidadPiscina = async (req: Request, res: Response) => {
   const { fecha } = piscinaFechaSchema.parse(req.query);

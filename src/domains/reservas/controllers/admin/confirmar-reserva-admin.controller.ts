@@ -1,9 +1,9 @@
-// src/controllers/admin/reservas/confirmar-reserva-admin.controller.ts
 import { Response } from "express";
-import type { AuthRequest } from "../../../../types/global";
-import { adminConfirmarReservaSchema } from "../../validators/admin-confirmar-reserva.schema";
-import { ConfirmarReservaAdminService } from "../../services/confirmar-reserva-admin.service";
-import { reservaToDTO } from "../../mappers/reservaToDTO";
+import type { AuthRequest } from "@/types/global";
+
+import { adminConfirmarReservaSchema } from "@/domains/reservas/validators";
+import { ConfirmarReservaAdminService } from "@/domains/reservas/services";
+import { reservaToDTO } from "@/domains/reservas/mappers/reservaToDTO";
 
 export const confirmarReservaAdmin = async (
   req: AuthRequest,
@@ -26,12 +26,13 @@ export const confirmarReservaAdmin = async (
       ok: true,
       data: reservaToDTO(reserva),
     });
-  } catch (err: any) {
-    const message = err?.message ?? "ERROR_CONFIRMAR_RESERVA";
+  } catch (error: any) {
+    const message = error?.message ?? "ERROR_CONFIRMAR_RESERVA";
 
     const map: Record<string, number> = {
       NO_AUTORIZADO_ADMIN: 403,
       RESERVA_NOT_FOUND: 404,
+      RESERVA_SIN_ESPACIO: 409,
       ESTADO_INVALIDO: 409,
     };
 

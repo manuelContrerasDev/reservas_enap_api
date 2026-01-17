@@ -1,24 +1,50 @@
-// src/controllers/reservas/admin/index.ts
+// src/domains/reservas/controllers/admin/index.ts
 
+import { obtenerReservasAdmin } from "./obtener-list-admin.controller";
 import { crearReservaManualAdmin } from "./crear-manual.controller";
-import { obtenerReservasAdmin } from "./admin-list.controller";
+
+import { editarReservaAdmin } from "./editar-reserva-admin.controller";
+import { agregarInvitadosAdmin } from "./agregar-invitados.controller";
+import { actualizarEstadoAdmin } from "./actualizar-estado.controller";
 
 import { aprobarPagoAdmin } from "./aprobar-pago.controller";
 import { rechazarPagoAdmin } from "./rechazar-pago.controller";
-import { cancelarReservaAdmin } from "./cancelar-admin.controller";
+import { confirmarReservaAdmin } from "./confirmar-reserva-admin.controller";
+
+import { cancelarReservaAdmin } from "./cancelar-reserva-admin.controller";
+import { searchUsers } from "./obtener-users.controller";
 
 export const ReservasAdminController = {
-  // 📋 Listado
+  /* ============================
+   * 📋 LISTADO
+   * ============================ */
   obtenerReservasAdmin,
 
-  // ✏️ Creación manual
+  /* ============================
+   * ✏️ CREACIÓN / EDICIÓN TOTAL
+   * ============================ */
   crearReservaManualAdmin,
+  editarReservaAdmin,
 
-  // 💰 Flujo financiero
+  /* ============================
+   * 👥 INVITADOS (ADMIN)
+   * ============================ */
+  agregarInvitadosAdmin,
+
+  /* ============================
+   * 💰 PAGOS
+   * ============================ */
   aprobarPagoAdmin,
   rechazarPagoAdmin,
+  confirmarReservaAdmin,
 
-  // 🚫 Cancelación controlada
+  /* ============================
+   * 🚫 CANCELACIÓN
+   * ============================ */
   cancelarReservaAdmin,
 
+  /* ============================
+   * 👤 USUARIOS
+   * ============================ */
+  searchUsers,
 };

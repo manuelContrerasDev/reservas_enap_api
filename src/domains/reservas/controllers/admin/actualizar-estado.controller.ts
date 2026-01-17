@@ -1,26 +1,24 @@
 import { Response } from "express";
-import type { AuthRequest } from "../../../types/global";
 import { ZodError } from "zod";
+import type { AuthRequest } from "@/types/global";
 
-import { ActualizarEstadoReservaService } from "../services";
-import { reservaToDTO } from "../mappers/reservaToDTO";
-import { actualizarEstadoSchema } from "../validators";
+import { ActualizarEstadoAdminService } from "@/domains/reservas/services";
+import { reservaToDTO } from "@/domains/reservas/mappers/reservaToDTO";
+import { actualizarEstadoReservaSchema } from "@/domains/reservas/validators";
 
-export const actualizarEstado = async (req: AuthRequest, res: Response) => {
+export const actualizarEstadoAdmin = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
-    // 🔐 auth + rol ADMIN garantizados por router (roleGuard), pero igual defensivo
     if (!req.user) {
       return res.status(401).json({ ok: false, error: "NO_AUTH" });
     }
 
-    const reservaId = req.params.id;
+    const payload = actualizarEstadoReservaSchema.parse(req.body);
 
-    // Nota: si ya usas validate(actualizarEstadoSchema) en router,
-    // esto podría omitirse. Lo dejamos para “verdad absoluta”.
-    const payload = actualizarEstadoSchema.parse(req.body);
-
-    const reserva = await ActualizarEstadoReservaService.ejecutar(
-      reservaId,
+    const reserva = await ActualizarEstadoAdminService.ejecutar(
+      req.params.id,
       payload.estado,
       req.user
     );
@@ -43,12 +41,8 @@ export const actualizarEstado = async (req: AuthRequest, res: Response) => {
     const statusMap: Record<string, number> = {
       NO_AUTH: 401,
       NO_AUTORIZADO_ADMIN: 403,
-
-      ESTADO_REQUERIDO: 400,
       ESTADO_INVALIDO: 400,
-
       NOT_FOUND: 404,
-
       TRANSICION_INVALIDA: 409,
     };
 

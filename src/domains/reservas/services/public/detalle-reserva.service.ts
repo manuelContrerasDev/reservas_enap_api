@@ -1,5 +1,5 @@
-import { ReservasReadRepository } from "../repositories";
-import type { AuthUser } from "../../../types/global";
+import { ReservasReadRepository } from "../../repositories";
+import type { AuthUser } from "@/types/global";
 import { Role } from "@prisma/client";
 
 export const DetalleReservaService = {

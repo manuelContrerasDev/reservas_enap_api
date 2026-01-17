@@ -1,8 +1,8 @@
 // src/domains/reservas/services/cancelar-reserva.service.ts
 import { ReservaEstado } from "@prisma/client";
-import type { AuthUser } from "../../../types/global";
-import { ReservasCancelarRepository } from "../repositories/cancelar.repository";
-import { prisma } from "../../../lib/db";
+import type { AuthUser } from "@/types/global";
+import { ReservasCancelarRepository } from "@/domains/reservas/repositories/cancelar.repository";
+import { prisma } from "@/lib/db";
 
 function startOfDay(d: Date) {
   const x = new Date(d);

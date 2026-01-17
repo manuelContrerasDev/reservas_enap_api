@@ -1,10 +1,10 @@
 // src/controllers/reservas/actualizar-invitados.controller.ts
 import { Response } from "express";
-import type { AuthRequest } from "../../../types/global";
+import type { AuthRequest } from "@/types/global";
 
-import { actualizarInvitadosSchema } from "../validators";
-import { ActualizarInvitadosReservaService } from "../services/actualizar-invitados.service";
-import { reservaToDTO } from "../mappers/reservaToDTO";
+import { actualizarInvitadosSchema } from "../../validators";
+import { ActualizarInvitadosService } from "@/domains/reservas/services/public/actualizar-invitados.service";
+import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 export const actualizarInvitados = async (req: AuthRequest, res: Response) => {
   try {
@@ -12,7 +12,7 @@ export const actualizarInvitados = async (req: AuthRequest, res: Response) => {
 
     const payload = actualizarInvitadosSchema.parse(req.body);
 
-    const reserva = await ActualizarInvitadosReservaService.ejecutar(
+    const reserva = await ActualizarInvitadosService.ejecutar(
       req.params.id,
       payload,
       req.user

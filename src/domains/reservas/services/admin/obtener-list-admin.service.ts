@@ -1,8 +1,8 @@
 import { Prisma } from "@prisma/client";
-import { ReservasAdminRepository } from "../repositories";
-import type { AdminReservasQuery } from "../validators";
+import { ReservasAdminRepository } from "../../repositories";
+import type { AdminReservasQuery } from "../../validators";
 
-export const ReservasAdminListService = {
+export const ObtenerListAdminService = {
   async ejecutar(query: AdminReservasQuery) {
 
     /* --------------------------------------------------------

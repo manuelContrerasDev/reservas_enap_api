@@ -2,7 +2,7 @@
 // ReservaManualService — ENAP 2025 (ADMIN · MANUAL)
 // ============================================================
 
-import { prisma } from "../../../lib/db";
+import { prisma } from "@/lib/db";
 import {
   ReservaEstado,
   TipoEspacio,
@@ -10,17 +10,17 @@ import {
 } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
 
-import { calcularReserva } from "../utils/calcularReserva";
-import { ReservasManualRepository } from "../repositories/manual.repository";
-import { mapReservaManualToCreateInput } from "../mappers/reservaManual.mapper";
-import type { ReservaManualRequest } from "../validators/reservaManual.schema";
+import { calcularReserva } from "@/domains/reservas/utils/calcularReserva";
+import { ReservasManualRepository } from "../../repositories/manual.repository";
+import { mapReservaManualToCreateInput } from "../../mappers/reservaManual.mapper";
+import type { ReservaManualRequest } from "../../validators/reservaManual.schema";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EXPIRES_IN_MS = DAY_MS;
 
 const SYSTEM_MANUAL_USER_ID = process.env.SYSTEM_MANUAL_USER_ID;
 
-export const ReservaManualService = {
+export const ReservaManualAdminService = {
   async crear(data: ReservaManualRequest, adminId: string) {
     /* =========================================================
      * Guard rails
@@ -176,6 +176,9 @@ export const ReservaManualService = {
         {
           ...mapReservaManualToCreateInput(data),
 
+          // CONTRATO PRISMA 
+          tipoEspacio: espacio.tipo,
+
           userId: SYSTEM_MANUAL_USER_ID,
           creadaPor: adminId,
 
@@ -189,7 +192,7 @@ export const ReservaManualService = {
           totalClp: precios.totalClp,
 
           terminosAceptados: true,
-          terminosVersion: "2025-ENAP",
+          terminosVersion: "2026-ENAP",
         },
         data.invitados
       );

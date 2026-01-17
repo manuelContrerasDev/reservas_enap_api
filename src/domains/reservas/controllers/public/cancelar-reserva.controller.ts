@@ -1,8 +1,8 @@
 // src/controllers/reservas/cancelar.controller.ts
 import { Response } from "express";
-import type { AuthRequest } from "../../../types/global";
-import { CancelarReservaService } from "../services/cancelar-reserva.service";
-import { reservaToDTO } from "../mappers/reservaToDTO";
+import type { AuthRequest } from "@/types/global";
+import { CancelarReservaService } from "@/domains/reservas/services/public/cancelar-reserva.service";
+import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 export const cancelarReserva = async (req: AuthRequest, res: Response) => {
   try {

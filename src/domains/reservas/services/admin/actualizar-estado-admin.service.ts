@@ -1,7 +1,8 @@
-import { prisma } from "../../../lib/db";
+import { prisma } from "@/lib/db";
 import { ReservaEstado, Role } from "@prisma/client";
-import { ReservasAdminRepository } from "../repositories";
-import type { AuthUser } from "../../../types/global";
+import type { AuthUser } from "@/types/global";
+
+import { ReservasAdminRepository } from "@/domains/reservas/repositories";
 
 const ADMIN_TRANSITIONS: Record<ReservaEstado, readonly ReservaEstado[]> = {
   PENDIENTE_PAGO: [
@@ -16,37 +17,38 @@ const ADMIN_TRANSITIONS: Record<ReservaEstado, readonly ReservaEstado[]> = {
     ReservaEstado.CONFIRMADA,
     ReservaEstado.RECHAZADA,
   ],
-  CONFIRMADA: [
-    ReservaEstado.CONFIRMADA,
-    ReservaEstado.FINALIZADA,
-  ],
+  CONFIRMADA: [ReservaEstado.CONFIRMADA, ReservaEstado.FINALIZADA],
   RECHAZADA: [ReservaEstado.RECHAZADA],
   CADUCADA: [ReservaEstado.CADUCADA],
   FINALIZADA: [ReservaEstado.FINALIZADA],
 };
 
-function isTransitionAllowed(from: ReservaEstado, to: ReservaEstado): boolean {
+function isTransitionAllowed(
+  from: ReservaEstado,
+  to: ReservaEstado
+): boolean {
   return ADMIN_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
-export const ActualizarEstadoReservaService = {
-  async ejecutar(id: string, nuevoEstado: ReservaEstado, adminUser: AuthUser) {
+export const ActualizarEstadoAdminService = {
+  async ejecutar(
+    reservaId: string,
+    nuevoEstado: ReservaEstado,
+    adminUser: AuthUser
+  ) {
     if (!adminUser || adminUser.role !== Role.ADMIN) {
       throw new Error("NO_AUTORIZADO_ADMIN");
     }
 
-    if (!Object.values(ReservaEstado).includes(nuevoEstado)) {
-      throw new Error("ESTADO_INVALIDO");
-    }
-
     const reserva = await prisma.reserva.findUnique({
-      where: { id },
+      where: { id: reservaId },
       select: { id: true, estado: true },
     });
+
     if (!reserva) throw new Error("NOT_FOUND");
 
     if (reserva.estado === nuevoEstado) {
-      return ReservasAdminRepository.obtenerPorId(id);
+      return ReservasAdminRepository.obtenerPorId(reservaId);
     }
 
     if (!isTransitionAllowed(reserva.estado, nuevoEstado)) {
@@ -54,22 +56,24 @@ export const ActualizarEstadoReservaService = {
     }
 
     const updated = await ReservasAdminRepository.actualizarEstado(
-      id,
+      reservaId,
       nuevoEstado
     );
 
-    prisma.auditLog.create({
-      data: {
-        action: "ACTUALIZAR_ESTADO_RESERVA_ADMIN",
-        entity: "RESERVA",
-        entityId: id,
-        userId: adminUser.id,
-        details: {
-          from: reserva.estado,
-          to: nuevoEstado,
+    prisma.auditLog
+      .create({
+        data: {
+          action: "ACTUALIZAR_ESTADO_RESERVA_ADMIN",
+          entity: "RESERVA",
+          entityId: reservaId,
+          userId: adminUser.id,
+          details: {
+            from: reserva.estado,
+            to: nuevoEstado,
+          },
         },
-      },
-    }).catch(() => {});
+      })
+      .catch(() => {});
 
     return updated;
   },

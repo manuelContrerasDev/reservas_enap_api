@@ -1,7 +1,9 @@
 import { Response } from "express";
 import type { AuthRequest } from "@/types/global";
-import { rechazarPagoService } from "@/domains/reservas/services/rechazar-pago.service";
-import { reservaToDTO } from "../../mappers/reservaToDTO";
+
+import { rechazarPagoSchema } from "@/domains/reservas/validators";
+import { RechazarPagoAdminService } from "@/domains/reservas/services";
+import { reservaToDTO } from "@/domains/reservas/mappers/reservaToDTO";
 
 /**
  * ❌ RECHAZAR PAGO (ADMIN)
@@ -11,18 +13,37 @@ export const rechazarPagoAdmin = async (
   req: AuthRequest,
   res: Response
 ) => {
-  const admin = req.user!;
-  const reservaId = req.params.id;
-  const { motivo } = req.body ?? {};
+  try {
+    if (!req.user) {
+      return res.status(401).json({ ok: false, error: "NO_AUTH" });
+    }
 
-  const reserva = await rechazarPagoService(
-    reservaId,
-    admin,
-    motivo
-  );
+    const { motivo } = rechazarPagoSchema.parse(req.body);
 
-  return res.json({
-    ok: true,
-    data: reservaToDTO(reserva),
-  });
+    const reserva = await RechazarPagoAdminService.ejecutar(
+      req.params.id,
+      req.user,
+      motivo
+    );
+
+    return res.json({
+      ok: true,
+      data: reservaToDTO(reserva),
+    });
+  } catch (error: any) {
+    const message = error?.message ?? "ERROR_RECHAZAR_PAGO";
+
+    const statusMap: Record<string, number> = {
+      NO_AUTH: 401,
+      NO_AUTORIZADO_ADMIN: 403,
+      NOT_FOUND: 404,
+      TRANSICION_INVALIDA: 409,
+      MOTIVO_REQUERIDO: 400,
+    };
+
+    return res.status(statusMap[message] ?? 500).json({
+      ok: false,
+      error: message,
+    });
+  }
 };

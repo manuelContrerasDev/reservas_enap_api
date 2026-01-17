@@ -1,8 +1,8 @@
-import { ReservasReadRepository } from "../repositories";
-import type { AuthUser } from "../../../types/global";
-import type { MisReservasQuery } from "../validators/mis-reservas.schema";
+import { ReservasReadRepository } from "@/domains/reservas/repositories";
+import type { AuthUser } from "@/types/global";
+import type { MisReservasQuery } from "@/domains/reservas/validators/mis-reservas.schema";
 
-export const ReservasMiasService = {
+export const MisReservasService = {
   async ejecutar(user: AuthUser, query?: MisReservasQuery) {
     if (!user?.id) throw new Error("NO_AUTH");
 

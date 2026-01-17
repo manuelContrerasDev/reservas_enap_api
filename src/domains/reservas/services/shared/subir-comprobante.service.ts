@@ -1,17 +1,17 @@
-// ============================================================
-// src/domains/reservas/services/subir-comprobante.service.ts
-// ENAP 2026 — Sync con contrato Reservas
-// ============================================================
+import { prisma } from "@/lib/db";
+import { ReservaEstado, Role } from "@prisma/client";
+import type { AuthUser } from "@/types/global";
 
-import { prisma } from "../../../lib/db";
-import { ReservaEstado } from "@prisma/client";
-import type { AuthUser } from "../../../types/global";
-import type { SubirComprobanteType } from "../validators/subir-comprobante.schema";
+import type { SubirComprobanteType } from "@/domains/reservas/validators";
 import { createAuditLogService } from "@/domains/audit/services/audit-log.service";
 import { AUDIT_ACTIONS } from "@/constants/audit-actions";
 
 export const SubirComprobanteService = {
-  async ejecutar(reservaId: string, data: SubirComprobanteType, user: AuthUser) {
+  async ejecutar(
+    reservaId: string,
+    data: SubirComprobanteType,
+    user: AuthUser
+  ) {
     if (!user?.id) throw new Error("NO_AUTH");
 
     const reserva = await prisma.reserva.findUnique({
@@ -27,21 +27,24 @@ export const SubirComprobanteService = {
     if (!reserva) throw new Error("NOT_FOUND");
 
     // 🔐 Permisos
-    if (user.role !== "ADMIN" && reserva.userId !== user.id) {
+    if (user.role !== Role.ADMIN && reserva.userId !== user.id) {
       throw new Error("FORBIDDEN");
     }
 
-    // 🚫 Estados que NO admiten comprobante
-    if (
-      reserva.estado === ReservaEstado.RECHAZADA ||
-      reserva.estado === ReservaEstado.CADUCADA ||
-      reserva.estado === ReservaEstado.CONFIRMADA ||
-      reserva.estado === ReservaEstado.FINALIZADA
-    ) {
+    // 🚫 Estados inválidos
+    const ESTADOS_NO_ADMITEN_COMPROBANTE: readonly ReservaEstado[] = [
+      ReservaEstado.RECHAZADA,
+      ReservaEstado.CADUCADA,
+      ReservaEstado.CONFIRMADA,
+      ReservaEstado.FINALIZADA,
+    ];
+
+    if (ESTADOS_NO_ADMITEN_COMPROBANTE.includes(reserva.estado)) {
       throw new Error("RESERVA_NO_ADMITE_COMPROBANTE");
     }
 
-    // ✅ Solo se puede subir desde PENDIENTE_PAGO
+
+    // ✅ Solo desde PENDIENTE_PAGO
     if (reserva.estado !== ReservaEstado.PENDIENTE_PAGO) {
       throw new Error("ESTADO_INVALIDO_PARA_COMPROBANTE");
     }
@@ -54,8 +57,8 @@ export const SubirComprobanteService = {
         comprobanteMime: data.comprobanteMime,
         comprobanteSize: data.comprobanteSize,
 
-        // 🔁 Transición contractual
         estado: ReservaEstado.PENDIENTE_VALIDACION,
+        expiresAt: null, // 🔒 contrato
       },
     });
 

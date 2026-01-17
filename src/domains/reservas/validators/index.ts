@@ -20,6 +20,11 @@ export * from "./actualizar-estado-reserva.schema";
 
 export * from "./obtener-admin.schema";
 export * from "./reservaManual.schema";
+export * from "./rechazar-pago.schema";
+export * from "./admin-confirmar-reserva.schema";
+export * from "./aprobar-pago.schema";
+export * from "./rechazar-pago.schema";
+export * from "./subir-comprobante.schema";
 
 // -------
 // UTILIDADES / VALIDACIONES
@@ -32,3 +37,5 @@ export * from "./invitados.schema";
 // PISCINA / DISPONIBILIDAD
 
 export * from "./piscina-fecha.schema";
+
+

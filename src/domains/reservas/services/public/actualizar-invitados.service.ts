@@ -2,11 +2,11 @@
 // actualizar-invitados.service.ts — ENAP 2025 (PRODUCTION READY)
 // ============================================================
 
-import { prisma } from "../../../lib/db";
+import { prisma } from "@/lib/db";
 import { ReservaEstado, TipoEspacio } from "@prisma/client";
-import type { ActualizarInvitadosType } from "../validators/actualizar-invitados.schema";
-import type { AuthUser } from "../../../types/global";
-import { ReservasUpdateRepository } from "../repositories/update.repository";
+import type { ActualizarInvitadosType } from "../../validators/actualizar-invitados.schema";
+import type { AuthUser } from "@/types/global";
+import { ReservasUpdateRepository } from "../../repositories/update.repository";
 
 type InvitadoLimpio = {
   nombre: string;
@@ -15,7 +15,7 @@ type InvitadoLimpio = {
   esPiscina: boolean;
 };
 
-export const ActualizarInvitadosReservaService = {
+export const ActualizarInvitadosService = {
   async ejecutar(
     reservaId: string,
     data: ActualizarInvitadosType,
@@ -53,7 +53,6 @@ export const ActualizarInvitadosReservaService = {
      * 3) Estados NO modificables
      * -------------------------------------------------------- */
     const estadosBloqueados: ReservaEstado[] = [
-      ReservaEstado.CANCELADA,
       ReservaEstado.RECHAZADA,
       ReservaEstado.FINALIZADA,
       ReservaEstado.CADUCADA,
@@ -102,6 +101,10 @@ export const ActualizarInvitadosReservaService = {
     /* --------------------------------------------------------
      * 6) Regla ENAP: adultos no pueden exceder lo declarado
      * -------------------------------------------------------- */
+    if (!reserva.espacio) {
+      throw new Error("RESERVA_SIN_ESPACIO");
+    }
+
     if (reserva.espacio.tipo !== TipoEspacio.PISCINA) {
       const adultosInvitados = invitadosLimpios.filter(
         (x) => (x.edad ?? 0) >= 12

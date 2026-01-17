@@ -6,7 +6,7 @@ import {
   adminInvitadosSchema,
 } from "../../validators/admin-invitados.schema";
 
-import { AgregarInvitadosService } from "../../services/agregar-invitados.service";
+import { AgregarInvitadosService } from "../../services/admin/agregar-invitados-admin.service";
 import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 export const agregarInvitadosAdmin = async (

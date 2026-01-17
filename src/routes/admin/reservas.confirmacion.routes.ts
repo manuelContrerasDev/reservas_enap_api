@@ -5,7 +5,7 @@ import { roleGuard } from "../../middlewares/roleGuard";
 import { asyncHandler } from "../../middlewares/asyncHandler";
 import { Role } from "@prisma/client";
 
-import { subirComprobante } from "../../domains/reservas/controllers/subirComprobante.controller";
+import { subirComprobante } from "../../domains/reservas/controllers/shared/subirComprobante.controller";
 
 const router = Router();
 

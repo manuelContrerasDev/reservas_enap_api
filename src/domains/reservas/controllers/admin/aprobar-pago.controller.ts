@@ -1,6 +1,6 @@
 import { Response } from "express";
 import type { AuthRequest } from "@/types/global";
-import { aprobarPagoService } from "@/domains/reservas/services/aprobar-pago.service";
+import { AprobarPagoAdminService } from "@/domains/reservas/services/admin/aprobar-pago-admin.service";
 import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 /**
@@ -11,14 +11,10 @@ export const aprobarPagoAdmin = async (
   req: AuthRequest,
   res: Response
 ) => {
-  const admin = req.user!;
-  const reservaId = req.params.id;
-  const payload = req.body ?? {};
-
-  const reserva = await aprobarPagoService(
-    reservaId,
-    admin,
-    payload
+  const reserva = await AprobarPagoAdminService(
+    req.params.id,
+    req.user!,
+    req.body // ya validado
   );
 
   return res.json({
@@ -26,3 +22,4 @@ export const aprobarPagoAdmin = async (
     data: reservaToDTO(reserva),
   });
 };
+

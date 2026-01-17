@@ -1,11 +1,12 @@
 import { Response } from "express";
-import type { AuthRequest } from "../../../types/global";
+import type { AuthRequest } from "@/types/global";
 
-import { editReservaSchema } from "../validators/edit-reserva.schema";
-import { EditarReservaService } from "../services/editar-reserva.service";
-import { reservaToDTO } from "../mappers/reservaToDTO";
+import { editReservaSchema } from "@/domains/reservas/validators/edit-reserva.schema";
+import { EditarReservaAdminService } from "@/domains/reservas/services";
 
-export const editarReserva = async (req: AuthRequest, res: Response) => {
+import { reservaToDTO } from "../../mappers/reservaToDTO";
+
+export const editarReservaAdmin = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -16,7 +17,7 @@ export const editarReserva = async (req: AuthRequest, res: Response) => {
 
     const payload = editReservaSchema.parse(req.body);
 
-    const reserva = await EditarReservaService.ejecutar(
+    const reserva = await EditarReservaAdminService.ejecutar(
       req.params.id,
       payload,
       req.user

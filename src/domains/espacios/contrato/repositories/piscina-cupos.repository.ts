@@ -10,7 +10,13 @@ export const PiscinaCuposRepository = {
     where: {
         tipoEspacio: "PISCINA",
         OR: [
+        // Bloquea : Reservas CONFIRMADAS
         { estado: ReservaEstado.CONFIRMADA },
+
+        // Bloquea : Reservas PENDIENTE_VALIDACION
+        { estado: ReservaEstado.PENDIENTE_VALIDACION },
+
+        // Bloquea : Reservas PENDIENTE_PAGO
         {
             estado: ReservaEstado.PENDIENTE_PAGO,
             OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],

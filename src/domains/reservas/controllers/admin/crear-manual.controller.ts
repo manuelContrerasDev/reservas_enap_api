@@ -11,7 +11,7 @@ import {
   type ReservaManualRequest,
 } from "../../validators/reservaManual.schema";
 
-import { ReservaManualService } from "../../services/reserva-manual.service";
+import { ReservaManualAdminService } from "../../services/admin/reserva-manual-admin.service";
 import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 export const crearReservaManualAdmin = async (
@@ -38,7 +38,7 @@ export const crearReservaManualAdmin = async (
     /* =========================================================
      * Service
      * ========================================================= */
-    const reserva = await ReservaManualService.crear(
+    const reserva = await ReservaManualAdminService.crear(
       payload,
       req.user.id // adminId
     );

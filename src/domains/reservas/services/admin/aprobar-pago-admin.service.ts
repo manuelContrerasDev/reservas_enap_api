@@ -2,9 +2,9 @@
 // aprobar-pago.service.ts — ENAP 2026
 // ============================================================
 
-import { prisma } from "../../../lib/db";
+import { prisma } from "../../../../lib/db";
 import { ReservaEstado } from "@prisma/client";
-import type { AuthUser } from "../../../types/global";
+import type { AuthUser } from "../../../../types/global";
 import { createAuditLogService } from "@/domains/audit/services/audit-log.service";
 import { AUDIT_ACTIONS } from "@/constants/audit-actions";
 
@@ -14,7 +14,7 @@ interface AprobarPagoPayload {
   nota?: string;
 }
 
-export async function aprobarPagoService(
+export async function AprobarPagoService(
   reservaId: string,
   admin: AuthUser,
   payload: AprobarPagoPayload = {}
@@ -55,7 +55,7 @@ export async function aprobarPagoService(
         estado: ReservaEstado.CONFIRMADA,
         confirmedAt: new Date(),
         confirmedBy: admin.id,
-        expiresAt: null, // ya no aplica
+        expiresAt: null, // no aplica
       },
     });
 

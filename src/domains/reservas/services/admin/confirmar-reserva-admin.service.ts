@@ -1,13 +1,6 @@
-// ============================================================
-// confirmar-reserva-admin.service.ts — ENAP 2025 (ADMIN)
-// ============================================================
-
-import { prisma } from "../../../lib/db";
-import {
-  ReservaEstado,
-  Role,
-} from "@prisma/client";
-import { calcularReserva } from "../utils/calcularReserva";
+import { prisma } from "@/lib/db";
+import { ReservaEstado, Role } from "@prisma/client";
+import { calcularReserva } from "@/domains/reservas/utils/calcularReserva";
 
 interface Params {
   reservaId: string;
@@ -17,16 +10,16 @@ interface Params {
 
 export const ConfirmarReservaAdminService = {
   async ejecutar({ reservaId, adminId, adminRole }: Params) {
-    /* =========================================================
+    /* =========================
      * Auth
-     * ========================================================= */
+     * ========================= */
     if (adminRole !== Role.ADMIN) {
       throw new Error("NO_AUTORIZADO_ADMIN");
     }
 
-    /* =========================================================
+    /* =========================
      * Reserva
-     * ========================================================= */
+     * ========================= */
     const reserva = await prisma.reserva.findUnique({
       where: { id: reservaId },
       include: {
@@ -37,42 +30,54 @@ export const ConfirmarReservaAdminService = {
 
     if (!reserva) throw new Error("RESERVA_NOT_FOUND");
 
+    if (!reserva.espacio) {
+      // 🔒 Invariante de dominio
+      throw new Error("RESERVA_SIN_ESPACIO");
+    }
+
     if (reserva.estado !== ReservaEstado.PENDIENTE_PAGO) {
       throw new Error("ESTADO_INVALIDO");
     }
 
-    /* =========================================================
-     * 🔑 ROLE REAL (NUNCA NULL)
-     * ========================================================= */
+    /* =========================
+     * Role efectivo
+     * ========================= */
     const role: Role =
-  reserva.usoReserva === "TERCEROS"
-    ? Role.EXTERNO
-    : Role.SOCIO;
+      reserva.usoReserva === "TERCEROS"
+        ? Role.EXTERNO
+        : Role.SOCIO;
 
+    /* =========================
+     * Cálculo precios
+     * ========================= */
     const precios = calcularReserva({
-    espacio: {
+      espacio: {
         tipo: reserva.espacio.tipo,
         modalidadCobro: reserva.espacio.modalidadCobro,
+
         precioBaseSocio: reserva.espacio.precioBaseSocio,
         precioBaseExterno: reserva.espacio.precioBaseExterno,
+
         precioPersonaAdicionalSocio:
-        reserva.espacio.precioPersonaAdicionalSocio,
+          reserva.espacio.precioPersonaAdicionalSocio,
         precioPersonaAdicionalExterno:
-        reserva.espacio.precioPersonaAdicionalExterno,
+          reserva.espacio.precioPersonaAdicionalExterno,
+
         precioPiscinaSocio: reserva.espacio.precioPiscinaSocio,
         precioPiscinaExterno: reserva.espacio.precioPiscinaExterno,
-    },
-    dias: reserva.dias,
-    cantidadAdultos: reserva.cantidadAdultos,
-    cantidadNinos: reserva.cantidadNinos,
-    cantidadPiscina: reserva.cantidadPiscina,
-    usoReserva: reserva.usoReserva,
-    role,
+      },
+
+      dias: reserva.dias,
+      cantidadAdultos: reserva.cantidadAdultos,
+      cantidadNinos: reserva.cantidadNinos,
+      cantidadPiscina: reserva.cantidadPiscina,
+      usoReserva: reserva.usoReserva,
+      role,
     });
 
-    /* =========================================================
+    /* =========================
      * Persistencia + Audit
-     * ========================================================= */
+     * ========================= */
     return prisma.$transaction(async (tx) => {
       const updated = await tx.reserva.update({
         where: { id: reservaId },

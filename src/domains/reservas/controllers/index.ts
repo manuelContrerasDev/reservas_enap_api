@@ -1,26 +1,40 @@
-// src/controllers/reservas/index.ts
+// ============================================================
+// Controllers — Reservas (ROOT AGGREGATOR)
+// ============================================================
 
-import { crearReserva } from "./crear-reserva.controller";
-import { misReservas } from "./mis-reservas.controller";
-import { cancelarReserva } from "./cancelar-reserva.controller";
-import { detalleReserva } from "./detalle-reserva.controller";
-import { actualizarEstado } from "./actualizar-estado.controller";
-import { disponibilidadPiscina } from "./disponibilidad-piscina.controller";
-import { actualizarInvitados } from "./actualizar-invitados.controller";
-import { editarReserva } from "./editar-reserva.controller";
-
-export const ReservasController = {
-  // 👤 USER / SHARED
+// 🔹 PUBLIC
+import {
   crearReserva,
   misReservas,
-  cancelarReserva,
   detalleReserva,
-
-  // ⚠️ LEGACY / TRANSICIÓN
-  actualizarEstado,
-
-  // 📦 OPERACIONES
-  disponibilidadPiscina,
+  cancelarReserva,
   actualizarInvitados,
-  editarReserva,
+  disponibilidadPiscina,
+} from "./public";
+
+import { subirComprobante } from "./shared/subirComprobante.controller";
+
+// ============================================================
+// Export facade para routes
+// ============================================================
+
+export const ReservasController = {
+  /* ============================
+   * 👤 USER / PUBLIC
+   * ============================ */
+  crearReserva,
+  misReservas,
+  detalleReserva,
+  cancelarReserva,
+  subirComprobante,
+
+  /* ============================
+   * 👥 INVITADOS (USER)
+   * ============================ */
+  actualizarInvitados,
+
+  /* ============================
+   * 📦 DISPONIBILIDAD
+   * ============================ */
+  disponibilidadPiscina,
 };

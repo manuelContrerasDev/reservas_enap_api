@@ -1,7 +1,7 @@
 import { Response } from "express";
 import type { AuthRequest } from "@/types/global";
 
-import { CancelarReservaAdminService } from "@/domains/reservas/services/cancelar-reserva-admin.service";
+import { CancelarReservaAdminService } from "@/domains/reservas/services/admin/cancelar-reserva-admin.service";
 import { cancelarReservaAdminSchema } from "@/domains/reservas/validators/cancelar-reserva-admin.schema";
 import { reservaToDTO } from "../../mappers/reservaToDTO";
 

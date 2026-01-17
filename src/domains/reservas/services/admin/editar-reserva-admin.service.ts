@@ -1,9 +1,9 @@
-import { prisma } from "../../../lib/db";
+import { prisma } from "../../../../lib/db";
 import { ReservaEstado, PaymentStatus } from "@prisma/client";
-import type { AuthUser } from "../../../types/global";
-import type { EditReservaType } from "../validators/edit-reserva.schema";
+import type { AuthUser } from "../../../../types/global";
+import type { EditReservaType } from "../../validators/edit-reserva.schema";
 
-export const EditarReservaService = {
+export const EditarReservaAdminService = {
   async ejecutar(reservaId: string, data: EditReservaType, user: AuthUser) {
     if (!user) throw new Error("NO_AUTH");
 
@@ -23,7 +23,6 @@ export const EditarReservaService = {
 
     /* ⛔ Estados bloqueados */
     const estadosBloqueados: ReservaEstado[] = [
-      ReservaEstado.CANCELADA,
       ReservaEstado.RECHAZADA,
       ReservaEstado.CADUCADA,
       ReservaEstado.FINALIZADA,

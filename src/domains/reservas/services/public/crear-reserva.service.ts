@@ -2,13 +2,13 @@
 // crear.service.ts — ENAP 2025 (SYNC WITH ESPACIOS)
 // ============================================================
 
-import { prisma } from "../../../lib/db";
+import { prisma } from "../../../../lib/db";
 import { ReservaEstado } from "@prisma/client";
 import { differenceInCalendarDays } from "date-fns";
-import { calcularReserva } from "../utils/calcularReserva";
-import { ReservasCreateRepository } from "../repositories";
-import type { AuthUser } from "../../../types/global";
-import type { CrearReservaType } from "../validators";
+import { calcularReserva } from "../../utils/calcularReserva";
+import { ReservasCreateRepository } from "../../repositories";
+import type { AuthUser } from "../../../../types/global";
+import type { CrearReservaType } from "../../validators";
 
 export const CrearReservaService = {
   async ejecutar(data: CrearReservaType, user: AuthUser) {

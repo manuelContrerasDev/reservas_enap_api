@@ -1,7 +1,7 @@
 import { Response } from "express";
-import type { AuthRequest } from "../../../types/global";
-import { DetalleReservaService } from "../services/detalle-reserva.service";
-import { reservaToDTO } from "../mappers/reservaToDTO";
+import type { AuthRequest } from "../../../../types/global";
+import { DetalleReservaService } from "@/domains/reservas/services/public/detalle-reserva.service";
+import { reservaToDTO } from "../../mappers/reservaToDTO";
 
 export const detalleReserva = async (req: AuthRequest, res: Response) => {
   const reserva = await DetalleReservaService.ejecutar(

@@ -3,7 +3,7 @@ import { Router } from "express";
 import { Role } from "@prisma/client";
 
 import { ReservasAdminController } from "@/domains/reservas/controllers/admin";
-import { subirComprobante } from "@/domains/reservas/controllers/subirComprobante.controller";
+import { subirComprobante } from "@/domains/reservas/controllers/shared/subirComprobante.controller";
 import { agregarInvitadosAdmin } from "@/domains/reservas/controllers/admin/agregar-invitados.controller";
 
 import { authGuard } from "@/middlewares/authGuard";

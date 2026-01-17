@@ -1,6 +1,6 @@
 // src/services/reservas/disponibilidad-piscina.service.ts
 
-import { PiscinaRepository } from "../repositories";
+import { PiscinaRepository } from "../../repositories";
 
 export const DisponibilidadPiscinaService = {
   async ejecutar(fechaISO: string) {
