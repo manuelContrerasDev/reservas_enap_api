@@ -1,26 +1,27 @@
-// src/modules/auth/auth.service.ts
-
-import { prisma } from "../../../lib/db";
+import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
-import { TokenService } from "../../../shared/services/TokenService";
-import { EmailService } from "../../../shared/services/EmailService";
+import { TokenService } from "@/shared/services/TokenService";
+import { EmailService } from "@/shared/services/EmailService";
+import { AuthErrorCode } from "../types/auth.errors";
 
-/* ============================================================================
- * CONSTANTES
- * ============================================================================ */
+/* ============================================================
+ * CONSTANTES DE DOMINIO
+ * ============================================================ */
 const EMAIL_CONFIRM_EXPIRES_MS = 24 * 60 * 60 * 1000; // 24h
 const RESET_EXPIRES_MS = 30 * 60 * 1000; // 30 min
-const RESET_COOLDOWN_MS = 5 * 60 * 1000; // 5 min
-const RESEND_CONFIRM_COOLDOWN_MS = 5 * 60 * 1000; // 5 min
 
 // Hash dummy para mitigar timing attacks
 const DUMMY_HASH =
   "$2a$12$Cq9E8E7uZcZ4sZ8FzHc9kOqGf6l5x7Wn9D5Bq6zKJ8eKcKpY9s8R6";
 
-/* ============================================================================
+/* ============================================================
  * HELPERS INTERNOS
- * ============================================================================ */
+ * ============================================================ */
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 function getEmailDomain(email: string): string {
   return email.split("@")[1]?.toLowerCase() ?? "";
 }
@@ -29,19 +30,19 @@ function resolveRoleByEmail(email: string): Role {
   return getEmailDomain(email) === "enap.cl" ? Role.SOCIO : Role.EXTERNO;
 }
 
-/* ============================================================================
+/* ============================================================
  * REGISTER
- * ============================================================================ */
+ * ============================================================ */
 export async function registerService(input: {
   email: string;
   password: string;
   name?: string;
 }) {
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeEmail(input.email);
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) {
-    throw new Error("EMAIL_ALREADY_REGISTERED");
+    return { ok: false as const, error: AuthErrorCode.EMAIL_ALREADY_REGISTERED };
   }
 
   const passwordHash = await bcrypt.hash(input.password, 12);
@@ -65,65 +66,51 @@ export async function registerService(input: {
 
   const confirmUrl = `${process.env.WEB_URL}/auth/confirm?token=${emailConfirmToken}`;
 
-  // Envío de email (no bloqueante)
+  // Side-effect seguro: no rompe el registro
   EmailService.sendConfirmEmail({
     to: user.email,
     name: user.name,
     confirmUrl,
-  }).catch(() => {});
+  }).catch((err) => {
+    console.warn("⚠️ [AUTH][REGISTER][EMAIL_CONFIRM_FAIL]", {
+      userId: user.id,
+      error: err?.message,
+    });
+  });
 
-  return {
-    message: "Usuario registrado. Revisa tu correo para confirmar la cuenta.",
-  };
+  return { ok: true as const };
 }
 
-/* ============================================================================
+/* ============================================================
  * LOGIN
- * ============================================================================ */
+ * ============================================================ */
 export async function loginService(input: {
   email: string;
   password: string;
 }) {
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeEmail(input.email);
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+  const user = await prisma.user.findUnique({ where: { email } });
 
-  // ⛔️ Usuario no existe → invalid credentials
+  // Mitigación timing attack
   if (!user) {
-    await bcrypt.compare(input.password, DUMMY_HASH); // timing attack protection
-    return {
-      ok: false,
-      code: "INVALID_CREDENTIALS",
-      message: "Correo o contraseña incorrectos",
-    };
+    await bcrypt.compare(input.password, DUMMY_HASH);
+    return { ok: false as const, error: AuthErrorCode.INVALID_CREDENTIALS };
   }
 
-  // ⛔️ Contraseña incorrecta → invalid credentials
   const validPassword = await bcrypt.compare(
     input.password,
     user.passwordHash
   );
 
   if (!validPassword) {
-    return {
-      ok: false,
-      code: "INVALID_CREDENTIALS",
-      message: "Correo o contraseña incorrectos",
-    };
+    return { ok: false as const, error: AuthErrorCode.INVALID_CREDENTIALS };
   }
 
-  // ⛔️ Correo NO confirmado → ESTE CASO YA NO SE PIERDE
   if (!user.emailConfirmed) {
-    return {
-      ok: false,
-      code: "EMAIL_NOT_CONFIRMED",
-      message: "Tu correo aún no está confirmado",
-    };
+    return { ok: false as const, error: AuthErrorCode.EMAIL_NOT_CONFIRMED };
   }
 
-  // ✅ LOGIN OK
   const token = TokenService.sign({
     sub: user.id,
     role: user.role,
@@ -132,7 +119,7 @@ export async function loginService(input: {
   });
 
   return {
-    ok: true,
+    ok: true as const,
     token,
     user: {
       id: user.id,
@@ -143,10 +130,9 @@ export async function loginService(input: {
   };
 }
 
-
-/* ============================================================================
+/* ============================================================
  * ME
- * ============================================================================ */
+ * ============================================================ */
 export async function meService(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -161,40 +147,30 @@ export async function meService(userId: string) {
   });
 
   if (!user) {
-    throw new Error("USER_NOT_FOUND");
+    // Semántica correcta: token inválido / sesión inválida
+    return { ok: false as const, error: AuthErrorCode.INVALID_CREDENTIALS };
   }
 
-  return user;
+  return { ok: true as const, user };
 }
 
-/* ============================================================================
+/* ============================================================
  * CONFIRM EMAIL
- * ============================================================================ */
+ * ============================================================ */
 export async function confirmEmailService(token: string) {
-  if (!token || token.trim().length === 0) {
-    throw new Error("INVALID_OR_EXPIRED_TOKEN");
-  }
-
-  // 🔹 Buscar por token (aunque esté expirado)
   const user = await prisma.user.findFirst({
-    where: { emailConfirmToken: token },
+    where: {
+      emailConfirmToken: token,
+      emailConfirmExpires: { gt: new Date() },
+    },
   });
 
   if (!user) {
-    throw new Error("INVALID_OR_EXPIRED_TOKEN");
+    return { ok: false as const, error: AuthErrorCode.INVALID_OR_EXPIRED_TOKEN };
   }
 
-  // 🔹 Ya confirmado → OK idempotente
   if (user.emailConfirmed) {
-    return { alreadyConfirmed: true };
-  }
-
-  // 🔹 Expirado solo si NO está confirmado
-  if (
-    user.emailConfirmExpires &&
-    user.emailConfirmExpires < new Date()
-  ) {
-    throw new Error("INVALID_OR_EXPIRED_TOKEN");
+    return { ok: false as const, error: AuthErrorCode.EMAIL_ALREADY_CONFIRMED };
   }
 
   await prisma.user.update({
@@ -203,73 +179,64 @@ export async function confirmEmailService(token: string) {
       emailConfirmed: true,
       emailConfirmToken: null,
       emailConfirmExpires: null,
-      emailLocked: user.role === Role.SOCIO,
     },
   });
 
-  return { confirmed: true };
+  return { ok: true as const };
 }
 
-
-/* ============================================================================
+/* ============================================================
  * RESEND CONFIRMATION
- * ============================================================================ */
+ * ============================================================ */
 export async function resendConfirmationService(email: string) {
-  const normalizedEmail = email.trim().toLowerCase();
-
   const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
+    where: { email: normalizeEmail(email) },
   });
 
-  // Respuesta neutra
-  if (!user) return;
+  // Respuesta neutra (anti user-enumeration)
+  if (!user) return { ok: true as const };
 
   if (user.emailConfirmed) {
-    throw new Error("EMAIL_ALREADY_CONFIRMED");
+    return {
+      ok: false as const,
+      error: AuthErrorCode.EMAIL_ALREADY_CONFIRMED,
+    };
   }
 
-  if (
-    user.emailConfirmExpires &&
-    user.emailConfirmExpires.getTime() - EMAIL_CONFIRM_EXPIRES_MS + RESEND_CONFIRM_COOLDOWN_MS >
-      Date.now()
-  ) {
-    return;
-  }
-
-  const newToken = TokenService.generateToken(32);
+  const token = TokenService.generateToken(32);
   const expires = TokenService.expiresIn(EMAIL_CONFIRM_EXPIRES_MS);
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      emailConfirmToken: newToken,
+      emailConfirmToken: token,
       emailConfirmExpires: expires,
     },
   });
 
-  const confirmUrl = `${process.env.WEB_URL}/auth/confirm?token=${newToken}`;
+  const confirmUrl = `${process.env.WEB_URL}/auth/confirm?token=${token}`;
 
   await EmailService.sendConfirmEmail({
     to: user.email,
     name: user.name,
     confirmUrl,
   });
+
+  return { ok: true as const };
 }
 
-/* ============================================================================
- * REQUEST RESET PASSWORD — SINGLE ACTIVE TOKEN
- * ============================================================================ */
-export async function requestResetService(email: string) {
-  const normalizedEmail = email.trim().toLowerCase();
-
+/* ============================================================
+ * RESET PASSWORD — REQUEST
+ * ============================================================ */
+export async function resetRequestService(email: string) {
   const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
+    where: { email: normalizeEmail(email) },
   });
 
-  // 🔒 Respuesta neutra (anti-enumeración)
-  if (!user) return;
+  // Respuesta neutra
+  if (!user) return { ok: true as const };
 
-  // 🛑 Eliminar TODOS los tokens activos previos (no usados)
+  // 🔐 Seguridad: invalidar tokens previos no usados
   await prisma.passwordResetToken.deleteMany({
     where: {
       userId: user.id,
@@ -277,7 +244,6 @@ export async function requestResetService(email: string) {
     },
   });
 
-  // ⏱️ Generar nuevo token
   const token = TokenService.generateToken(32);
   const expiresAt = TokenService.expiresIn(RESET_EXPIRES_MS);
 
@@ -291,20 +257,20 @@ export async function requestResetService(email: string) {
 
   const resetUrl = `${process.env.WEB_URL}/auth/reset-confirm?token=${token}`;
 
-  // 📧 Envío de email
   await EmailService.sendResetPasswordEmail({
     to: user.email,
     name: user.name,
     resetUrl,
   });
+
+  return { ok: true as const };
 }
 
-
-/* ============================================================================
+/* ============================================================
  * CHECK RESET TOKEN
- * ============================================================================ */
+ * ============================================================ */
 export async function checkResetService(token: string) {
-  const tokenRecord = await prisma.passwordResetToken.findFirst({
+  const record = await prisma.passwordResetToken.findFirst({
     where: {
       token,
       expiresAt: { gt: new Date() },
@@ -312,21 +278,21 @@ export async function checkResetService(token: string) {
     },
   });
 
-  if (!tokenRecord) {
-    throw new Error("INVALID_OR_EXPIRED_TOKEN");
+  if (!record) {
+    return { ok: false as const, error: AuthErrorCode.INVALID_OR_EXPIRED_TOKEN };
   }
 
-  return true;
+  return { ok: true as const };
 }
 
-/* ============================================================================
- * RESET PASSWORD
- * ============================================================================ */
+/* ============================================================
+ * RESET PASSWORD — CONFIRM
+ * ============================================================ */
 export async function resetPasswordService(input: {
   token: string;
   newPassword: string;
 }) {
-  const tokenRecord = await prisma.passwordResetToken.findFirst({
+  const record = await prisma.passwordResetToken.findFirst({
     where: {
       token: input.token,
       expiresAt: { gt: new Date() },
@@ -334,31 +300,22 @@ export async function resetPasswordService(input: {
     },
   });
 
-  if (!tokenRecord) {
-    throw new Error("INVALID_OR_EXPIRED_TOKEN");
+  if (!record) {
+    return { ok: false as const, error: AuthErrorCode.INVALID_OR_EXPIRED_TOKEN };
   }
 
-  await prisma.$transaction(async (tx) => {
-    const passwordHash = await bcrypt.hash(input.newPassword, 12);
+  const passwordHash = await bcrypt.hash(input.newPassword, 12);
 
-    await tx.user.update({
-      where: { id: tokenRecord.userId },
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.userId },
       data: { passwordHash },
-    });
-
-    await tx.passwordResetToken.update({
+    }),
+    prisma.passwordResetToken.update({
       where: { token: input.token },
       data: { usedAt: new Date() },
-    });
+    }),
+  ]);
 
-    await tx.passwordResetToken.deleteMany({
-      where: {
-        userId: tokenRecord.userId,
-        usedAt: null,
-        NOT: { token: input.token },
-      },
-    });
-  });
-
-  return { message: "Contraseña actualizada correctamente." };
+  return { ok: true as const };
 }

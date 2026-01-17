@@ -1,11 +1,15 @@
 import { Request, Response } from "express";
 import { resendConfirmationService } from "../services/auth.service";
+import { mapAuthErrorToHttp } from "../helpers/auth-error.mapper";
 
-export const resendConfirmation = async (req: Request, res: Response) => {
-  await resendConfirmationService(req.body.email);
+export async function resendConfirmationController(req: Request, res: Response) {
+  const result = await resendConfirmationService(req.body.email);
 
-  return res.json({
-    ok: true,
-    message: "Si la cuenta existe, se enviará un nuevo enlace.",
-  });
-};
+  if (!result.ok) {
+    return res
+      .status(mapAuthErrorToHttp(result.error))
+      .json(result);
+  }
+
+  return res.json(result);
+}

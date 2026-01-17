@@ -1,11 +1,17 @@
 import { Request, Response } from "express";
 import { confirmEmailService } from "../services/auth.service";
+import { mapAuthErrorToHttp } from "../helpers/auth-error.mapper";
 
-export const confirmEmail = async (req: Request, res: Response) => {
-  await confirmEmailService(req.query.token as string);
+export async function confirmEmailController(req: Request, res: Response) {
+  const { token } = req.body;
 
-  return res.json({
-    ok: true,
-    message: "Correo confirmado correctamente 🎉",
-  });
-};
+  const result = await confirmEmailService(token);
+
+  if (!result.ok) {
+    return res
+      .status(mapAuthErrorToHttp(result.error))
+      .json(result);
+  }
+
+  return res.json(result);
+}

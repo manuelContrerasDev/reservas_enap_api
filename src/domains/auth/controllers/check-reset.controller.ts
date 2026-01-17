@@ -1,8 +1,15 @@
 import { Request, Response } from "express";
 import { checkResetService } from "../services/auth.service";
+import { mapAuthErrorToHttp } from "../helpers/auth-error.mapper";
 
-export const checkReset = async (req: Request, res: Response) => {
-  await checkResetService(req.query.token as string);
+export async function checkResetController(req: Request, res: Response) {
+  const result = await checkResetService(req.body.token);
 
-  return res.json({ ok: true, message: "Token válido" });
-};
+  if (!result.ok) {
+    return res
+      .status(mapAuthErrorToHttp(result.error))
+      .json(result);
+  }
+
+  return res.json(result);
+}

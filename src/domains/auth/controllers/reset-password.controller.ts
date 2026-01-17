@@ -1,11 +1,15 @@
 import { Request, Response } from "express";
 import { resetPasswordService } from "../services/auth.service";
+import { mapAuthErrorToHttp } from "../helpers/auth-error.mapper";
 
-export const resetPassword = async (req: Request, res: Response) => {
-  await resetPasswordService(req.body);
+export async function resetPasswordController(req: Request, res: Response) {
+  const result = await resetPasswordService(req.body);
 
-  return res.json({
-    ok: true,
-    message: "Contraseña actualizada correctamente",
-  });
-};
+  if (!result.ok) {
+    return res
+      .status(mapAuthErrorToHttp(result.error))
+      .json(result);
+  }
+
+  return res.json(result);
+}

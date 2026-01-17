@@ -1,34 +1,51 @@
+// src/shared/services/TokenService.ts
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { env } from "@/config/env";
 
 const JWT_EXPIRES = "7d";
+const JWT_ALGORITHM: jwt.Algorithm = "HS256";
 
+/* ============================================================
+ * TYPES
+ * ============================================================ */
+export interface JwtPayload {
+  sub: string;
+  role: string;
+  email: string;
+  name?: string | null;
+}
+
+/* ============================================================
+ * TOKEN SERVICE
+ * ============================================================ */
 export const TokenService = {
   /**
    * 🔑 Firmar JWT
    */
-  sign(payload: object) {
-    return jwt.sign(payload, process.env.JWT_SECRET!, {
+  sign(payload: JwtPayload) {
+    return jwt.sign(payload, env.JWT_SECRET, {
       expiresIn: JWT_EXPIRES,
+      algorithm: JWT_ALGORITHM,
     });
   },
 
   /**
-   * 🔐 Token aleatorio seguro (genérico)
+   * 🔐 Token aleatorio seguro (crypto)
    */
   generateToken(bytes: number = 32) {
     return crypto.randomBytes(bytes).toString("hex");
   },
 
   /**
-   * 🆕 Alias para evitar errores en controladores nuevos
+   * 🆕 Alias semántico
    */
   randomToken(bytes: number = 32) {
     return this.generateToken(bytes);
   },
 
   /**
-   * ⏱ Calcula fecha de expiración para un token
+   * ⏱ Fecha de expiración
    */
   expiresIn(ms: number) {
     return new Date(Date.now() + ms);
