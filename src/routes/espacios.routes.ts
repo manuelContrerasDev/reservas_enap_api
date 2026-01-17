@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { EspaciosController } from "@/domains/espacios/controllers/index";
 
 import { authGuard } from "@/middlewares/authGuard";
 import { roleGuard } from "@/middlewares/roleGuard";
@@ -8,6 +7,26 @@ import { asyncHandler } from "@/middlewares/asyncHandler";
 import { validate } from "@/middlewares/validate";
 import { validateQuery } from "@/middlewares/validateQuery";
 import { validateParams } from "@/middlewares/validateParams";
+
+// CONTRATO ESPACIOS (OFICIAL)
+import {
+  catalogoContratoController,
+} from "@/domains/espacios/contrato/controllers/catalogo.controller";
+
+import {
+  detalleContratoController,
+} from "@/domains/espacios/contrato/controllers/detalle.controller";
+
+import {
+  catalogoContratoQuerySchema,
+} from "@/domains/espacios/contrato/validators/catalogo-query.schema";
+
+import {
+  detalleContratoQuerySchema,
+} from "@/domains/espacios/contrato/validators/detalle-query.schema";
+
+import { EspaciosController } from "@/domains/espacios/controllers/index";
+
 
 import {
   crearEspacioSchema,
@@ -22,6 +41,19 @@ import {
 } from "@/domains/espacios/validators/";
 
 const router = Router();
+
+router.get(
+  "/catalogo",
+  validateQuery(catalogoContratoQuerySchema),
+  asyncHandler(catalogoContratoController)
+);
+
+router.get(
+  "/:tipo/detalle",
+  validateParams(tipoEspacioSchema),
+  validateQuery(detalleContratoQuerySchema),
+  asyncHandler(detalleContratoController)
+);
 
 /* ============================================================
  * 🛠 ADMIN — LISTAR ESPACIOS
@@ -123,5 +155,6 @@ router.patch(
   validateParams(toggleEspacioSchema),
   asyncHandler(EspaciosController.toggleActivo)
 );
+
 
 export default router;

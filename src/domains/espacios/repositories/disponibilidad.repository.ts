@@ -1,4 +1,6 @@
 // src/repositories/espacios/disponibilidad.repository.ts
+//reutilizado
+
 import { prisma } from "../../../lib/db";
 import { Prisma, ReservaEstado } from "@prisma/client";
 

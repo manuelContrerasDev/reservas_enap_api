@@ -54,8 +54,67 @@ model PasswordResetToken {
 }
 
 // --------------------------------------
-// MODULO ESPACIOS (Precios Granulares)
+// MODULO ESPACIOS
 // --------------------------------------
+
+model EspacioTipoConfig {
+  id        String     @id @default(uuid())
+  tipo      TipoEspacio @unique
+
+  // =========================
+  // Catálogo / UX
+  // =========================
+  titulo       String
+  descripcion  String
+  imagenes     Json        // string[]
+  visible      Boolean     @default(true)
+  deletedAt    DateTime?
+
+  // =========================
+  // Inventario lógico
+  // =========================
+  unidadesTotales Int?     // CABANA / QUINCHO
+  cupoTotal       Int?     // PISCINA (100)
+
+  // =========================
+  // Modalidad (FIJA POR TIPO)
+  // =========================
+  modalidadCobro ModalidadCobro
+
+  // =========================
+  // Capacidades (ADMIN)
+  // =========================
+  capacidadSocio       Int?
+  capacidadExterno     Int?
+  capacidadComun       Int?
+  capacidadAlojamiento Int?
+  maximoAbsoluto       Int?
+
+  // =========================
+  // Precios base
+  // =========================
+  precioBaseSocio   Int
+  precioBaseExterno Int
+
+  // =========================
+  // Extras por invitado
+  // =========================
+  precioExtraSocio   Int
+  precioExtraExterno Int
+
+  // =========================
+  // Piscina
+  // =========================
+  precioPiscinaSocio   Int?
+  precioPiscinaExterno Int?
+  freePiscinaSocio     Int?   // ej: 5
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tipo, visible])
+}
+
 
 model Espacio {
   id             String         @id @default(uuid())
@@ -101,18 +160,36 @@ model Espacio {
 model Reserva {
   id        String @id @default(uuid())
   userId    String
-  espacioId String
 
+  // ============================================================
+  // 🧩 PRODUCTO RESERVADO (CONTRATO)
+  // ============================================================
+  tipoEspacio TipoEspacio   // CABANA | QUINCHO | PISCINA
+
+  // ============================================================
+  // 🏠 UNIDAD ASIGNADA (LEGACY / INTERNO)
+  // ============================================================
+  espacioId String?         // NULL para piscina
+  espacio   Espacio? @relation(fields: [espacioId], references: [id])
+
+  // ============================================================
+  // ⏱️ FECHAS
+  // ============================================================
   fechaInicio DateTime
   fechaFin    DateTime
-  dias        Int // snapshot calculado en backend
+  dias        Int
 
-  expiresAt DateTime? // Regla 24h
+  expiresAt DateTime?
 
+  // ============================================================
+  // 🔐 USO Y ESTADO
+  // ============================================================
   usoReserva UsoReserva    @default(USO_PERSONAL)
   estado     ReservaEstado @default(PENDIENTE_PAGO)
 
-  // Datos Contacto
+  // ============================================================
+  // 📇 DATOS CONTACTO
+  // ============================================================
   nombreSocio    String
   rutSocio       String
   telefonoSocio  String
@@ -124,23 +201,29 @@ model Reserva {
   emailResponsable     String?
   telefonoResponsable  String?
 
-  // Cantidades
+  // ============================================================
+  // 👥 CANTIDADES (SNAPSHOT)
+  // ============================================================
   cantidadAdultos Int @default(1)
   cantidadNinos   Int @default(0)
   cantidadPiscina Int @default(0)
 
-  // Snapshots financieros
+  // ============================================================
+  // 💰 SNAPSHOTS FINANCIEROS
+  // ============================================================
   precioBaseSnapshot    Int @default(0)
   precioPersonaSnapshot Int @default(0)
   precioPiscinaSnapshot Int @default(0)
   totalClp              Int
 
-  // Auditoría estado
+  // ============================================================
+  // ❌ AUDITORÍA
+  // ============================================================
   cancelledAt DateTime?
   cancelledBy CancelledBy?
 
   // ============================================================
-  // ✅ PAGO MANUAL (SIMPLIFICADO) — Comprobante + Confirmación
+  // 💳 PAGO MANUAL
   // ============================================================
   comprobanteUrl   String?
   comprobanteName  String?
@@ -148,7 +231,7 @@ model Reserva {
   comprobanteSize  Int?
 
   confirmedAt DateTime?
-  confirmedBy String? // adminId que confirmó (NO relation para no amarrar)
+  confirmedBy String?
 
   terminosAceptados Boolean @default(false)
   terminosVersion   String?
@@ -156,25 +239,26 @@ model Reserva {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Admin
+  // ============================================================
+  // 🔗 RELACIONES
+  // ============================================================
   creadaPor    String?
   adminCreador User? @relation("ReservasCreadasPorAdmin", fields: [creadaPor], references: [id])
 
   invitados Invitado[]
   pago      Pago?
   movimientosTesoreria MovimientoTesoreria[]
-  espacio   Espacio @relation(fields: [espacioId], references: [id])
-  user      User    @relation("ReservasPorUsuario", fields: [userId], references: [id])
+  user      User @relation("ReservasPorUsuario", fields: [userId], references: [id])
 
+  // ============================================================
+  // ⚡ ÍNDICES
+  // ============================================================
   @@index([estado])
   @@index([fechaInicio, fechaFin])
-  @@index([espacioId, fechaInicio, fechaFin])
+  @@index([tipoEspacio, fechaInicio, fechaFin])   // 🔑 CLAVE PARA DISPONIBILIDAD
   @@index([userId, createdAt])
-
-  // Opcional (recomendado): acelera tablero admin “pendientes”
   @@index([estado, expiresAt])
 }
-
 
 model Invitado {
   id        String  @id @default(uuid())
@@ -270,6 +354,19 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([userId, createdAt])
 }
+
+// --------------------------------------
+// MODEL LUNES EXCEPCION
+// --------------------------------------
+model LunesExcepcion {
+  id        String   @id @default(uuid())
+  fecha     DateTime @unique
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([fecha])
+}
+
 
 // --------------------------------------
 // ENUMS
