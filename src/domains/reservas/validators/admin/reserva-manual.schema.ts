@@ -1,20 +1,22 @@
 // ============================================================
-// reservaManual.schema.ts — Reserva Manual Admin (ENAP 2025)
-// BACKEND · CONTRATO OFICIAL
+// reserva-manual.schema.ts — Reserva Manual Admin (ENAP 2025)
+// BACKEND · CONTRATO OFICIAL (FLUJO SIMPLIFICADO)
 // ============================================================
 
 import { z } from "zod";
 import { UsoReserva } from "@prisma/client";
+import { fechaISO } from "../shared/fecha-rango.schema";
 
 /* ============================================================
- * ENUMS
+ * ENUMS (ADMIN)
  * ============================================================ */
 export const TipoClienteEnum = z.enum(["SOCIO", "EXTERNO"]);
 
 /* ============================================================
- * INVITADO
+ * INVITADO — INPUT MANUAL (NO DOMINIO FINAL)
+ * Usado SOLO en flujo admin wizard
  * ============================================================ */
-export const invitadoSchema = z
+const invitadoManualInputSchema = z
   .object({
     nombre: z.string().trim().min(2),
     rut: z.string().trim().min(3),
@@ -24,9 +26,9 @@ export const invitadoSchema = z
   .strict();
 
 /* ============================================================
- * SOCIO
+ * SOCIO — INPUT ADMIN
  * ============================================================ */
-export const socioSchema = z
+const socioManualSchema = z
   .object({
     nombre: z.string().trim().min(2),
     rut: z.string().trim().min(3),
@@ -43,9 +45,9 @@ export const socioSchema = z
   .strict();
 
 /* ============================================================
- * RESPONSABLE
+ * RESPONSABLE — INPUT ADMIN
  * ============================================================ */
-export const responsableSchema = z
+const responsableManualSchema = z
   .object({
     nombre: z.string().trim().min(2),
     rut: z.string().trim().min(3),
@@ -55,15 +57,15 @@ export const responsableSchema = z
   .strict();
 
 /* ============================================================
- * RESERVA MANUAL (ADMIN)
+ * RESERVA MANUAL — REQUEST ADMIN
  * ============================================================ */
 export const reservaManualRequestSchema = z
   .object({
-    /* ================= FECHAS / ESPACIO ================= */
+    /* ================= ESPACIO / FECHAS ================= */
     espacioId: z.string().uuid(),
 
-    fechaInicio: z.string().trim().min(8),
-    fechaFin: z.string().trim().min(8),
+    fechaInicio: fechaISO,
+    fechaFin: fechaISO,
 
     /* ================= CANTIDADES ================= */
     cantidadAdultos: z.coerce.number().int().min(1),
@@ -77,15 +79,25 @@ export const reservaManualRequestSchema = z
     socioPresente: z.coerce.boolean(),
 
     /* ================= DATOS PERSONA ================= */
-    socio: socioSchema,
-    responsable: responsableSchema.nullable().optional(),
+    socio: socioManualSchema,
+    responsable: responsableManualSchema.nullable().optional(),
 
-    /* ================= INVITADOS ================= */
-    invitados: z.array(invitadoSchema).optional().default([]),
+    /* ================= INVITADOS (WIZARD) ================= */
+    invitados: z.array(invitadoManualInputSchema).optional().default([]),
   })
   .strict()
   .superRefine((data, ctx) => {
-    /* ================= REGLAS RESPONSABLE ================= */
+    /* ================= TERCEROS ================= */
+    if (data.usoReserva === "TERCEROS" && data.socioPresente) {
+      ctx.addIssue({
+        path: ["socioPresente"],
+        code: z.ZodIssueCode.custom,
+        message:
+          "Si el socio va a asistir, la reserva no puede ser para terceros",
+      });
+    }
+
+    /* ================= RESPONSABLE ================= */
     if (!data.socioPresente && !data.responsable) {
       ctx.addIssue({
         path: ["responsable"],
@@ -116,7 +128,7 @@ export const reservaManualRequestSchema = z
   });
 
 /* ============================================================
- * TYPES
+ * TYPES — CONTRATO ADMIN
  * ============================================================ */
 export type ReservaManualRequest = z.infer<
   typeof reservaManualRequestSchema

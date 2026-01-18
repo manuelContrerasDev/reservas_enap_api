@@ -1,18 +1,7 @@
 import { z } from "zod";
 
 /* ============================================================
- * VALIDACIÓN BACKEND — RESPONSABLE
- *
- * Contexto:
- * - Usado SOLO en edición de reserva
- * - socioPresente es un flag transitorio (NO persistente)
- *
- * Reglas:
- * 1. socioPresente = true
- *    → NO puede existir responsable
- *
- * 2. socioPresente = false
- *    → responsable COMPLETO es obligatorio
+ * VALIDACIÓN — RESPONSABLE (shared rule)
  * ============================================================ */
 export const validarResponsable = (
   data: {
@@ -27,39 +16,39 @@ export const validarResponsable = (
   const socioPresente =
     typeof data.socioPresente === "boolean" ? data.socioPresente : true;
 
+  const isBlank = (v: unknown) =>
+    typeof v !== "string" || v.trim().length === 0;
+
+  const existeAlguno =
+    !isBlank(data.nombreResponsable) ||
+    !isBlank(data.rutResponsable) ||
+    !isBlank(data.emailResponsable) ||
+    !isBlank(data.telefonoResponsable);
+
   /* ================= SOCIO PRESENTE ================= */
   if (socioPresente) {
-    const existeResponsable =
-      data.nombreResponsable ||
-      data.rutResponsable ||
-      data.emailResponsable ||
-      data.telefonoResponsable;
-
-    if (existeResponsable) {
+    if (existeAlguno) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message:
-          "No puede existir responsable si el socio está presente",
-        path: ["socioPresente"],
+        message: "No puede existir responsable si el socio está presente",
+        path: ["responsable"],
       });
     }
-
     return;
   }
 
   /* ================= SOCIO NO PRESENTE ================= */
   const faltanDatos =
-    !data.nombreResponsable ||
-    !data.rutResponsable ||
-    !data.emailResponsable ||
-    !data.telefonoResponsable;
+    isBlank(data.nombreResponsable) ||
+    isBlank(data.rutResponsable) ||
+    isBlank(data.emailResponsable) ||
+    isBlank(data.telefonoResponsable);
 
   if (faltanDatos) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message:
-        "Debes completar todos los datos del responsable",
-      path: ["nombreResponsable"],
+      message: "Debes completar todos los datos del responsable",
+      path: ["responsable"],
     });
   }
 };
